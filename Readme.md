@@ -1,13 +1,17 @@
-Chequer - fast scalar/object/array checking and validation
-==========================================================
+Chequer (like in check-and-query)
+=================================
 
-Chequer allows to really quickly check scalar values, objects and arrays. It uses mongo-query-like "language"
-for matching input values. It's only one class with one powerfull function.
+__Chequer is magicaly fast and amazingly simple. As an added bonus, it validates scalars, arrays, objects and grumpy cats!__
 
-What Chequer does differently, is that it does not use any additional classes to do it's work. Its
+It's only one lightweight class with one-but-powerfull function.
+In short - use MongoDB-like queries to match input values. 
+
+What Chequer does differently, is that it does'nt use any additional classes to do it's work. It's
 self contained in one file and uses only one simple class.
-It's intentional - Chequer is **fast** and **simple**, and loading additional classes through factories is *not*.
-As an added bonus (and by design), you can use simple config files to setup your validation.
+
+It's intentional - Chequer is **fast** and **simple**, and loading additional classes through factories is... well, *not*.
+As an added bonus (and by design), you can use plain text config files to setup your validation, and don't have to worry
+about factories and all the bloat.
 
 But what is most important - chequer is actually not designed for validation! It simply allows to check
 if something matches the query - so you *can* validate. But, it's main purpose is to check stuff,
