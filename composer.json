@@ -1,5 +1,5 @@
 {
-    "name": "stamina/chequer",
+    "name": "stamina/chequer-php",
     "type": "library",
     "description": "Fast & simple scalar/object/array checking/validation class",
     "keywords": ["php", "validate", "check", "array"],
