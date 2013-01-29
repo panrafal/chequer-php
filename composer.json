@@ -1,0 +1,20 @@
+{
+    "name": "stamina/chequer",
+    "type": "library",
+    "description": "Fast & simple scalar/object/array checking/validation class",
+    "keywords": ["php", "validate", "check", "array"],
+    "homepage": "https://github.com/panrafal/chequer-php",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Rafal Lindemann",
+            "email": "rl@stamina.pl"
+        }
+    ],
+    "require": {
+        "php": ">=5.3"
+    },
+    "autoload": {
+        "psr-0": { "Chequer": "" }
+    }
+}
