@@ -39,7 +39,7 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
     public function testCheck($expected, $rules, $matchAll = null, $data = null) {
         if (func_num_args() < 4) $data = $this->data;
         if (is_string($expected)) $this->setExpectedException($expected);
-        $this->assertEquals($expected, $this->chequer->check($data, $rules, $matchAll));
+        $this->assertEquals($expected, $this->chequer->query($data, $rules, $matchAll));
     }    
     
     public function checkProvider() {

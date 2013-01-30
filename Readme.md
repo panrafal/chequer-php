@@ -17,7 +17,7 @@ But what is most important - chequer is actually not designed for validation! It
 if something matches the query - so you *can* validate. But, it's main purpose is to check stuff,
 whether it's user input, environment variables, function results, objects etc.
 
-It's also extensible - you can extend the class with your own operands, and you can use
+It's also extensible - you can extend the class with your own operators, and you can use
 closures as checks.
 
 Why another validation library?
@@ -29,6 +29,8 @@ check a value - be it simple string, or a complex array.
 
 Usage
 -----
+
+### Environment variables checking
 
 This example will match all users from *localhost*, plus those with IP starting from *'192'* and having a *'debug'* cookie.
 
@@ -42,10 +44,12 @@ if (Chequer::checkEnvironment([
 }
 ```
 
+
+
 Query language
 --------------
 Query language is modelled a bit after MongoDB. 
-At least the operands start with '$' (use single quotes or escape!) and share the same names.
+At least the operators start with '$' (use single quotes or escape!) and share the same names.
 
 A `query` can be:
 * `scalar` (`string`, `int` etc.) - the value should match the query (with type conversion - 1 == '1')
@@ -53,12 +57,12 @@ A `query` can be:
 * `false` - the value should be exactly `false`
 * `true` - the value should be anything `true` in php
 * `array` - a complex query with any combination of following **key** => **rule**:
-    * `$operand` => operand's parameter 
-      one of special operands (see below)
+    * `$operator` => operator's parameter 
+      one of special operators - (see below)[#operators]
     * '$' => `bool` 
       `true` will set this query to `AND` mode, `false` will set it to `OR`
     * `string` => `query` 
-      check the value's subkey with the `query` (see below)
+      check the value's `subkey` with the `query` - (see below)[#subkeys]
     * `int` => `query` 
       check the value with the `query`
 
@@ -71,30 +75,48 @@ The mode is **not** carried over to subqueries.
 
 When calling `check` you can specify the first level's mode in $matchAll parameter.
 
-You can also use '$' key to change the mode, or use `$or`/`$and` operands.
+You can also use '$' key to change the mode, or use `$or`/`$and` operators.
 
 Consider these examples
 * *AND* `['$regex' => 'foo', '$not' => 'foobar']`
-* *OR* `['foo', 'bar']`
-* *OR* `['foo', '$regex' => 'bar']`
-* *OR* `['$' => false, '$regex' => 'foo', '$not' => 'foobar']`
-* *OR* `['$or' => ['$regex' => 'foo', '$not' => 'foobar']]`
+* *OR* `['foo', 'bar']` because it's an array of scalars
+* *OR* `['foo', '$regex' => 'bar']` because element with index 0 is a scalar
+* *OR* `['$' => false, '$regex' => 'foo', '$not' => 'foobar']` because of `'$'=>false`
+* *OR* `['$or' => ['$regex' => 'foo', '$not' => 'foobar']]` because of `$or`
 
-### Operands
+### Operators
 
-* `$and` => [`query`, `query`, ...] - matches all queries
-* `$or` => [`query`, `query`, ...] - matches any query
-* `$not` => `query` - matches if `query` results to false
-* `$regex` => '/regexp/' - matches strings using regular expressions
-* `$eq` => value - matches value using strict operand (===)
-* `$call` => callable - matches if callable($value) returns TRUE
+The currently available operators are:
+* `$and` => [`query`, `query`, ...] 
+  matches all queries
+* `$or` => [`query`, `query`, ...] 
+  matches any query
+* `$not` => `query` 
+  negates the `query`
+* `$regex` => '/regexp/' 
+  matches strings using regular expressions
+* `$eq` => `compare` 
+  matches value using strict operator (===)
+* `$check` => `callable`
+  matches if callable($value) returns TRUE
+* `$size` => `query`
+  checks the size of array or string using the `query`
+
+  This will match empty strings or between 3 and 20.
+  `Chequer::checkValue('foobar', ['$size' => [false, '$between' => [3, 20]]])`
 
 ### Subkeys
 
-Subkey can be an array's key or object's property. 
+Subkey can be:
+* array's key 
+* object's property
+* object's method with '()' suffix
+  `Chequer::checkValue(new SplFileInfo(), ['getSize()' => ['$gt' => 0]])`
 
-If it does not exist in the value, and the value is an 0-indexed array, Chequer will traverse this
+If the subkey does not exist in the value, and the value is an 0-indexed array, Chequer will traverse this
 array in search for the first array/object having this key.
+
+Note however, that two different queries may match in two different subitems.
 
 Like here:
 ```php
@@ -103,21 +125,21 @@ Chequer::checkValue([
     ['some' => 'thing'],
     ['hello' => 'world'],
     ['hello' => 'bye']
-], ['foo' => true, 'hello' => true]);
+], ['foo' => true, 'some' => true, 'hello' => true]);
 ```
 
-We are looking for both 'foo' and 'hello' keys, but the 'hello' is defined inside the array. However
-it will be discovered, because the array has continuous keys starting from 0.
+We are looking for 'foo', 'some' and 'hello' keys, but the 'hello' and 'some' are defined inside the subitems. 
+However, they *will* be discovered, because the array has continuous keys starting from 0. 
 
 Note however, that `['hello' => 'bye']` will not match, because the first element takes the precedence.
 
 ### Extending
 
-Simply define protected function with the name checkOperand*
+Simply define protected function with the name checkOperator*
 
-To define the `$true` operand:
+To define the `$true` operator:
 ```php
-protected function checkOperandTrue($value, $rule) {
+protected function checkOperatorTrue($value, $rule) {
     return true;
 }
 ```
