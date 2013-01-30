@@ -151,7 +151,9 @@ protected function checkOperatorTrue($value, $rule) {
 }
 ```
 
-Note, that the whole idea is very fresh. I've come up with the concept on January 29th, and made the lib the same day.
-An that means - it *will* change!
+Note, that the whole idea is very fresh. I've come up with the concept on January 29th, and made the lib the same day. <br/>
+And that means - it *will* change!
 
 &copy;2013 Rafal Lindemann
+
+[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/b0780748041204c1d29e52c80d852fa1 "githalytics.com")](http://githalytics.com/panrafal/chequer-php)
