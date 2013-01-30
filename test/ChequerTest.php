@@ -2,6 +2,10 @@
 
 require_once __DIR__ . '/../Chequer.php';
 
+class ChequerTest_Object {
+    
+}
+
 class ChequerTest extends PHPUnit_Framework_TestCase {
 
 	/**
@@ -17,6 +21,7 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
                     'foo' => 'bar',
                     'array' => [1, 2, 3],
                     'hashmap' => ['one' => 'ONE', 'two' => 'TWO', 3, 'sub' => [1, 2, 'foo' => 'BAR']],
+                    'object' => new ChequerTest_Object(),
                     'number' => 1,
                     [
                         'hello' => 'World!',

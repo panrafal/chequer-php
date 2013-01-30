@@ -97,6 +97,10 @@ The currently available operators are:
   matches strings using regular expressions
 * `$eq` => `compare` 
   matches value using strict operator (===)
+* `$gt`|`$gte`|`$lt`|`$lte` => `compare`
+  greater-than|lower-than comparisons
+* `$between` => [`lower`, `upper`]
+  checks if value is between lower and upper bounds (inclusive)
 * `$check` => `callable`
   matches if callable($value) returns TRUE
 * `$size` => `query`
