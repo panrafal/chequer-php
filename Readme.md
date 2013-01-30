@@ -36,11 +36,13 @@ Install
 Use [Composer](http://getcomposer.org/) package `stamina/chequer-php` to install.
 
 The minimum required PHP version is 5.3. Because 5.4 introduces the shorthand array syntax - this version is recommended
-and used in unit tests and this documentation.
+and used in this documentation.
 
 ```
 php composer.phar require stamina/chequer-php
 ```
+
+[![Build Status](https://travis-ci.org/panrafal/chequer-php.png?branch=master)](https://travis-ci.org/panrafal/chequer-php)
 
 Usage
 -----
