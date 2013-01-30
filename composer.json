@@ -2,7 +2,7 @@
     "name": "stamina/chequer-php",
     "type": "library",
     "description": "Fast & simple scalar/object/array checking/validation class",
-    "keywords": ["php", "validate", "check", "array"],
+    "keywords": ["php", "validate", "validation", "check", "callback", "array", "scalar", "object", "callable"],
     "homepage": "https://github.com/panrafal/chequer-php",
     "license": "MIT",
     "authors": [
