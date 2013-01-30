@@ -1,8 +1,8 @@
 Chequer (like in check-and-query)
 =================================
 
-__Chequer is amazingly fast and magicaly simple. As an added bonus, it matches scalars, arrays, 
-objects and grumpy cats against the query of Your choice!__
+__Chequer is amazingly fast and magicaly simple.__<br/>
+__As an added bonus, it matches scalars, arrays, objects and grumpy cats against the query of Your choice!__
 
 It's only one lightweight class with one-but-powerfull function. Ok, there are more functions, but there
 is _the one_, that makes all the fuss.
@@ -29,6 +29,15 @@ Why another validation library?
 Simply because - it's not a validation library! There are many others better suited for this purpose, 
 but there are none (to my knowledge), which allow you to really quickly (in terms of code and execution) 
 check a value - be it simple string, or a complex array.
+
+Install
+-------
+
+Use [Composer](http://getcomposer.org/) package `stamina/chequer-php` to install.
+
+```
+php composer.phar require stamina/chequer-php
+```
 
 Usage
 -----
