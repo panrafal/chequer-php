@@ -4,17 +4,17 @@ class Chequer {
 
     protected $query;
     protected $matchAll;
-    protected $lookInsideArray;
+    protected $deepArrays;
 
     /**
      * @param $query Default query
      * @param $matchAll Default matchAll
-     * @param $lookInsideArray Enable searching for subkey in arrays
+     * @param $deepArrays Enable searching for subkeys in arrays
      */
-    function __construct( $query = false, $matchAll = null, $lookInsideArray = true ) {
+    function __construct( $query = false, $matchAll = null, $deepArrays = true ) {
         $this->query = $query;
         $this->matchAll = $matchAll;
-        $this->lookInsideArray = $lookInsideArray;
+        $this->deepArrays = $deepArrays;
     }
 
 
@@ -28,13 +28,14 @@ class Chequer {
     }
 
 
-    public function getLookInsideArray() {
-        return $this->lookInsideArray;
+    public function getDeepArrays() {
+        return $this->deepArrays;
     }
 
 
-    public function setLookInsideArray( $lookInsideArray ) {
-        $this->lookInsideArray = $lookInsideArray;
+    /** Enable searching for subkeys in subarrays */
+    public function setDeepArrays( $deepArrays ) {
+        $this->deepArrays = $deepArrays;
     }
 
 
@@ -122,7 +123,7 @@ class Chequer {
                         $result = call_user_func(array($this, 'checkOperator' . ucfirst(substr($key, 1))), $value, $rule);
                     }
                 } else { // look in the array/hashmap
-                    $result = $this->checkSubkey($value, $key, $rule, $this->lookInsideArray);
+                    $result = $this->checkSubkey($value, $key, $rule, $this->deepArrays);
                     if ($result === null) $result = $this->query(null, $rule);
                 }
                 if ($result === null) continue;
@@ -135,7 +136,7 @@ class Chequer {
     }
 
 
-    protected function checkSubkey( $value, $key, $rule, $lookInsideArray = false ) {
+    protected function checkSubkey( $value, $key, $rule, $deepArrays = false ) {
         if (!is_array($value) && !is_object($value))
                 throw new InvalidArgumentException('Array or object required for key matching.');
 
@@ -148,7 +149,7 @@ class Chequer {
                 return $this->query(call_user_func(array($value, $method)), $rule);
             }
         }
-        if ($lookInsideArray && is_array($value) && isset($value[0])) {
+        if ($deepArrays && is_array($value) && isset($value[0])) {
             for ($i = 0, $length = count($value); $i < $length, isset($value[$i]); ++$i) {
                 $subvalue = $value[$i];
                 if (is_array($subvalue) || is_object($subvalue)) {
