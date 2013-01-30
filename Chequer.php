@@ -52,7 +52,7 @@ class Chequer {
      * 
      *  */
     public static function checkEnvironment($query, $matchAll = true) {
-        $ch = new Chequer;
+        $ch = new Chequer($query, $matchAll);
         $table = array(
             $_SERVER, 
             '_SERVER' => $_SERVER,
@@ -63,13 +63,12 @@ class Chequer {
             '_POST' => $_POST,
             '_REQUEST' => $_REQUEST,
         );
-        
-        return $ch->query($table, $query, $matchAll);
+        return $ch->check($table);
     }
     
     public static function checkValue($value, $query, $matchAll = null) {
-        $ch = new static;
-        return $ch->query($value, $query, $matchAll);
+        $ch = new static($query, $matchAll);
+        return $ch->check($value);
     }
     
     public function __invoke($value) {
@@ -80,8 +79,8 @@ class Chequer {
      * 
      * See Readme.md for documentation
      */
-    public function check($value) {
-        return $this->query($value, $this->query, $this->matchAll);
+    public function check($value, $matchAll = null) {
+        return $this->query($value, $this->query, $matchAll === null ? $this->matchAll : $matchAll);
     }
     
     /** Checks the value against provided query
@@ -102,6 +101,7 @@ class Chequer {
                 return $value == $query;
             }
         } elseif (is_object($query) && is_callable($query)) {
+            if ($query instanceof Chequer) return $query->check($value, $matchAll);
             return call_user_func($query, $value, $query, $matchAll);
         } else {
             if ($matchAll === null) $matchAll = false === (isset($query[0]) && is_scalar($query[0]));
