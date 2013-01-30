@@ -35,12 +35,29 @@ Install
 
 Use [Composer](http://getcomposer.org/) package `stamina/chequer-php` to install.
 
+The minimum required PHP version is 5.3. Because 5.4 introduces the shorthand array syntax - this version is recommended
+and used in unit tests and this documentation.
+
 ```
 php composer.phar require stamina/chequer-php
 ```
 
 Usage
 -----
+
+For simple checks use 
+```php
+if (Cheque::checkValue($value, $query)) {}
+```
+
+When you want to reuse your query, or pass it somewhere as a callback, create the object and call `check` method,
+or invoke the object like this:
+```php
+$cheque = new Cheque($query);
+if ($cheque->check($value)) {}
+// or
+if ($cheque($value)) {}
+```
 
 ### Environment variables checking
 
@@ -56,6 +73,25 @@ if (Chequer::checkEnvironment([
 }
 ```
 
+### Array filtering
+
+This will leave only values from 2 to 5 in the array.
+```php
+$array = [1, 2, 3, 4, 5, 6];
+$array = array_filter($array, new Chequer(['$between' => [2, 5]]))
+```
+
+### Iterator filtering
+
+This will iterate through files with 'php' or 'html' extensions, that are older than one day.
+```php
+$files = new FilesystemIterator(dirname(__DIR__));
+$files = new CallbackFilterIterator($files, new Chequer([
+        'getExtension()' => ['php', 'html']
+        'getMTime()' => ['$lt' => strtotime('-1 day')]
+    ]));
+foreach($files as $file) {}
+```
 
 Query language
 --------------
