@@ -7,18 +7,18 @@ objects and grumpy cats against the query of Your choice!__
 It's only one lightweight class with one-but-powerfull function. Ok, there are more functions, but there
 is _the one_, that makes all the fuss.
 
-In short - use MongoDB-like queries to match values. 
+In short - use __MongoDB-like queries__ to __match values__. 
 
 What Chequer does differently, is that it doesn't use any additional classes to do it's work. It's
 self contained in one file and uses only one simple class.
-
 It's intentional - Chequer is **fast** and **simple**, and loading additional classes through factories is... well, *not*.
 As an added bonus (and by design), you can use plain text config files to setup your validation, and don't have to worry
 about factories and all the bloat.
 
 But what is most important - Chequer is actually _not designed_ for validation! It simply allows to check
 if something matches the query - so you *can* validate. But, it's a lot more than that! You can validate, 
-check and filter almost anything - be it user input, environment variables, function results, objects etc.
+check and filter almost anything - be it user input, environment variables, function results, objects, iterators, 
+deep arrays, files and so on.
 
 It's also extensible - you can extend the class with your own operators, and you can use
 closures as checks. Plus it's **MIT** licensed, so share the love and contribute!
@@ -60,13 +60,13 @@ A `query` can be:
 * `false` - the value should be exactly `false`
 * `true` - the value should be anything `true` in php
 * `array` - a complex query with any combination of following **key** => **rule**:
-    * `$operator` => operator's parameter 
-      one of special operators - (see below)[#operators]
-    * '$' => `bool` 
+    * `$operator` => operator's parameter <br/>
+        one of special operators - ([see below](#operators))
+    * '$' => `bool`  <br/>
       `true` will set this query to `AND` mode, `false` will set it to `OR`
-    * `string` => `query` 
-      check the value's `subkey` with the `query` - (see below)[#subkeys]
-    * `int` => `query` 
+    * `string` => `query`  <br/>
+      check the value's `subkey` with the `query` - ([see below](#subkeys))
+    * `int` => `query`  <br/>
       check the value with the `query`
 
 ### Match All (AND) / Match Any (OR) in complex queries
@@ -90,26 +90,26 @@ Consider these examples
 ### Operators
 
 The currently available operators are:
-* `$and` => [`query`, `query`, ...] 
+* `$and` => [`query`, `query`, ...]  <br/>
   matches all queries
-* `$or` => [`query`, `query`, ...] 
+* `$or` => [`query`, `query`, ...]  <br/>
   matches any query
-* `$not` => `query` 
+* `$not` => `query`  <br/>
   negates the `query`
-* `$regex` => '/regexp/' 
+* `$regex` => '/regexp/'  <br/>
   matches strings using regular expressions
-* `$eq` => `compare` 
+* `$eq` => `compare`  <br/>
   matches value using strict operator (===)
-* `$gt`|`$gte`|`$lt`|`$lte` => `compare`
+* `$gt`|`$gte`|`$lt`|`$lte` => `compare` <br/>
   greater-than|lower-than comparisons
-* `$between` => [`lower`, `upper`]
+* `$between` => [`lower`, `upper`] <br/>
   checks if value is between lower and upper bounds (inclusive)
-* `$check` => `callable`
+* `$check` => `callable` <br/>
   matches if callable($value) returns TRUE
-* `$size` => `query`
+* `$size` => `query` <br/>
   checks the size of array or string using the `query`
 
-  This will match empty strings or between 3 and 20.
+  This will match empty strings or between 3 and 20 characters long. <br/>
   `Chequer::checkValue('foobar', ['$size' => [false, '$between' => [3, 20]]])`
 
 ### Subkeys
@@ -117,7 +117,7 @@ The currently available operators are:
 Subkey can be:
 * array's key 
 * object's property
-* object's method with '()' suffix
+* object's method with '()' suffix <br/>
   `Chequer::checkValue(new SplFileInfo(), ['getSize()' => ['$gt' => 0]])`
 
 If the subkey does not exist in the value, and the value is an 0-indexed array, Chequer will traverse this
@@ -151,5 +151,7 @@ protected function checkOperatorTrue($value, $rule) {
 }
 ```
 
+Note, that the whole idea is very fresh. I've come up with the concept on January 29th, and made the lib the same day.
+An that means - it *will* change!
 
 &copy;2013 Rafal Lindemann
