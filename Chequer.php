@@ -192,7 +192,7 @@ class Chequer {
 
 
     protected function checkOperatorBetween( $value, $rule ) {
-        if (!count($rule) == 2)
+        if (count($rule) != 2)
                 throw new InvalidArgumentException('Two element array required for $between!');
         return $value >= $rule[0] && $value <= $rule[1];
     }

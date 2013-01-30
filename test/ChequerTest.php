@@ -8,15 +8,10 @@ class ChequerTest_Object {
 
 class ChequerTest extends PHPUnit_Framework_TestCase {
 
-	/**
-	 * @var Chequer
-	 */
-	protected $chequer;
-    
     protected $data;
 
 	protected function setUp() {
-        $this->data = 
+        $this->data =
                 [
                     'foo' => 'bar',
                     'array' => [1, 2, 3],
@@ -29,24 +24,32 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
                     [
                         'hello' => 'obscured'
                     ]
-                ];
-		$this->chequer = new Chequer();
-	}
+        ];
+    }
 
-	protected function tearDown() {
-		
-	}
+
+    protected function tearDown() {
+        
+    }
+
+
+    /** @return Chequer */
+    public function buildChequer( $rules, $matchAll ) {
+        return new Chequer($rules, $matchAll);
+    }
 
 
     /**
      * @dataProvider checkProvider
      */
-    public function testCheck($expected, $rules, $matchAll = null, $data = null) {
+    public function testCheck( $expected, $rules, $matchAll = null, $data = null ) {
         if (func_num_args() < 4) $data = $this->data;
         if (is_string($expected)) $this->setExpectedException($expected);
-        $this->assertEquals($expected, $this->chequer->query($data, $rules, $matchAll));
-    }    
-    
+        $chequer = $this->buildChequer($rules, $matchAll);
+        $this->assertEquals($expected, $chequer->check($data));
+    }
+
+
     public function checkProvider() {
         return [
             'scalar_scalar-true' => [true, 'foo', null, 'foo'],
@@ -87,6 +90,18 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             'or_auto' => [true, ['something', 'foo' => 'bar', 'missing' => true]],
             
             'and_force' => [false, ['something', 'foo' => 'bar', 'missing' => true], true],
+            
+            'gt' => [false, ['number' => ['$gt' => 1]]],
+            'gte' => [true, ['number' => ['$gte' => 1]]],
+            
+            'between' => [true, ['number' => ['$between' => [1, 2]]]],
+            'between-false' => [false, ['number' => ['$between' => [2, 3]]]],
+            'between-fail' => ['Exception', ['number' => ['$between' => 1]]],
+            
+            'size-string' => [true, ['foo' => ['$size' => 3]]],
+            'size-array' => [true, ['array' => ['$size' => 3]]],
+            
+            'check' => [true, ['foo' => ['$check' => function($v) {return $v == 'bar';}]]],
         ];
     }
     
