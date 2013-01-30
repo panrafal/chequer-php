@@ -105,5 +105,25 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
         ];
     }
     
+    public function testCheckEnvironment() {
+        $this->assertTrue(Chequer::checkEnvironment([
+                    'PHP_SELF' => $_SERVER['PHP_SELF'],
+                    '_SERVER' => [
+                        'PHP_SELF' => $_SERVER['PHP_SELF']
+                    ],
+                    '_ENV' => [
+                        'PATH' => $_ENV['PATH']
+                    ]
+                ]));
+    }
+    
+    public function testInvoke() {
+        $this->assertEquals([1 => 2, 3 => 4, 5 => 6], array_filter([1, 2, 3, 4, 5, 6], new Chequer([2, 4, 6])));
+        
+        $files = new FilesystemIterator(dirname(__DIR__));
+        $files = new CallbackFilterIterator($files, new Chequer(['getExtension()' => 'php']));
+        $this->assertEquals(['Chequer.php'], array_map('basename', array_keys(iterator_to_array($files))));
+    }
+    
 }
 
