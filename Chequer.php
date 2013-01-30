@@ -120,10 +120,10 @@ class Chequer {
                     if ($key === '$') {
                         $matchAll = $rule;
                     } else {
-                        $result = call_user_func(array($this, 'checkOperator' . ucfirst(substr($key, 1))), $value, $rule);
+                        $result = call_user_func(array($this, 'queryOperator' . ucfirst(substr($key, 1))), $value, $rule);
                     }
                 } else { // look in the array/hashmap
-                    $result = $this->checkSubkey($value, $key, $rule, $this->deepArrays);
+                    $result = $this->querySubkey($value, $key, $rule, $this->deepArrays);
                     if ($result === null) $result = $this->query(null, $rule);
                 }
                 if ($result === null) continue;
@@ -136,7 +136,7 @@ class Chequer {
     }
 
 
-    protected function checkSubkey( $value, $key, $rule, $deepArrays = false ) {
+    protected function querySubkey( $value, $key, $rule, $deepArrays = false ) {
         if (!is_array($value) && !is_object($value))
                 throw new InvalidArgumentException('Array or object required for key matching.');
 
@@ -153,7 +153,7 @@ class Chequer {
             for ($i = 0, $length = count($value); $i < $length, isset($value[$i]); ++$i) {
                 $subvalue = $value[$i];
                 if (is_array($subvalue) || is_object($subvalue)) {
-                    $subresult = $this->checkSubkey($subvalue, $key, $rule);
+                    $subresult = $this->querySubkey($subvalue, $key, $rule);
                     if ($subresult !== null) return $subresult;
                 }
             }
@@ -162,66 +162,66 @@ class Chequer {
     }
 
 
-    protected function checkOperatorNot( $value, $rule ) {
+    protected function queryOperatorNot( $value, $rule ) {
         return !$this->query($value, $rule);
     }
 
 
-    protected function checkOperatorEq( $value, $rule ) {
+    protected function queryOperatorEq( $value, $rule ) {
         return $value === $rule;
     }
 
 
-    protected function checkOperatorGt( $value, $rule ) {
+    protected function queryOperatorGt( $value, $rule ) {
         return $value > $rule;
     }
 
 
-    protected function checkOperatorGte( $value, $rule ) {
+    protected function queryOperatorGte( $value, $rule ) {
         return $value >= $rule;
     }
 
 
-    protected function checkOperatorLt( $value, $rule ) {
+    protected function queryOperatorLt( $value, $rule ) {
         return $value < $rule;
     }
 
 
-    protected function checkOperatorLte( $value, $rule ) {
+    protected function queryOperatorLte( $value, $rule ) {
         return $value <= $rule;
     }
 
 
-    protected function checkOperatorBetween( $value, $rule ) {
+    protected function queryOperatorBetween( $value, $rule ) {
         if (count($rule) != 2)
                 throw new InvalidArgumentException('Two element array required for $between!');
         return $value >= $rule[0] && $value <= $rule[1];
     }
 
 
-    protected function checkOperatorOr( $value, $rule ) {
+    protected function queryOperatorOr( $value, $rule ) {
         return $this->query($value, $rule, false);
     }
 
 
-    protected function checkOperatorAnd( $value, $rule ) {
+    protected function queryOperatorAnd( $value, $rule ) {
         return $this->query($value, $rule, true);
     }
 
 
-    protected function checkOperatorRegex( $value, $rule ) {
+    protected function queryOperatorRegex( $value, $rule ) {
         if (!is_string($value))
                 throw new InvalidArgumentException('String required for regex matching.');
         return preg_match($rule, $value) == true;
     }
 
 
-    protected function checkOperatorCheck( $value, $rule ) {
+    protected function queryOperatorCheck( $value, $rule ) {
         return call_user_func($rule, $value);
     }
 
 
-    protected function checkOperatorSize( $value, $rule ) {
+    protected function queryOperatorSize( $value, $rule ) {
         $length = is_string($value) ? mb_strlen($value) : count($value);
         return $this->query($length, $rule);
     }
