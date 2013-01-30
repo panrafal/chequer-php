@@ -5,17 +5,18 @@ class Chequer {
     protected $query;
     protected $matchAll;
     protected $lookInsideArray;
-    
+
     /**
      * @param $query Default query
      * @param $matchAll Default matchAll
      * @param $lookInsideArray Enable searching for subkey in arrays
      */
-    function __construct($query = false, $matchAll = null, $lookInsideArray = true) {
+    function __construct( $query = false, $matchAll = null, $lookInsideArray = true ) {
         $this->query = $query;
         $this->matchAll = $matchAll;
         $this->lookInsideArray = $lookInsideArray;
     }
+
 
     public function getQuery() {
         return $this->query;
@@ -51,10 +52,10 @@ class Chequer {
      * Available keys are everything from $_SERVER, _ENV, _COOKIE, _SESSION, _GET, _POST, _REQUEST.
      * 
      *  */
-    public static function checkEnvironment($query, $matchAll = true) {
+    public static function checkEnvironment( $query, $matchAll = true ) {
         $ch = new Chequer($query, $matchAll);
         $table = array(
-            $_SERVER, 
+            $_SERVER,
             '_SERVER' => $_SERVER,
             '_ENV' => $_ENV,
             '_COOKIE' => $_COOKIE,
@@ -65,24 +66,28 @@ class Chequer {
         );
         return $ch->check($table);
     }
-    
-    public static function checkValue($value, $query, $matchAll = null) {
+
+
+    public static function checkValue( $value, $query, $matchAll = null ) {
         $ch = new static($query, $matchAll);
         return $ch->check($value);
     }
-    
-    public function __invoke($value) {
+
+
+    public function __invoke( $value ) {
         return $this->check($value);
     }
-    
+
+
     /** Checks the value against the instance's query
      * 
      * See Readme.md for documentation
      */
-    public function check($value, $matchAll = null) {
+    public function check( $value, $matchAll = null ) {
         return $this->query($value, $this->query, $matchAll === null ? $this->matchAll : $matchAll);
     }
-    
+
+
     /** Checks the value against provided query
      * 
      * See Readme.md for documentation
@@ -91,7 +96,7 @@ class Chequer {
      * @param $query Query to match
      * @param $matchAll TRUE to require all first level queries, FALSE to require only one
      *  */
-    public function query($value, $query, $matchAll = null) {
+    public function query( $value, $query, $matchAll = null ) {
         if ($query === null || $query === false) {
             return $value === $query;
         } elseif (is_scalar($query)) {
@@ -104,8 +109,9 @@ class Chequer {
             if ($query instanceof Chequer) return $query->check($value, $matchAll);
             return call_user_func($query, $value, $query, $matchAll);
         } else {
-            if ($matchAll === null) $matchAll = false === (isset($query[0]) && is_scalar($query[0]));
-            foreach($query as $key => $rule) {
+            if ($matchAll === null)
+                    $matchAll = false === (isset($query[0]) && is_scalar($query[0]));
+            foreach ($query as $key => $rule) {
                 $result = null;
                 if (is_int($key)) {
                     $result = $this->query($value, $rule);
@@ -113,7 +119,7 @@ class Chequer {
                     if ($key === '$') {
                         $matchAll = $rule;
                     } else {
-                        $result = call_user_func(array($this, 'checkOperator'.ucfirst(substr($key, 1))), $value, $rule);
+                        $result = call_user_func(array($this, 'checkOperator' . ucfirst(substr($key, 1))), $value, $rule);
                     }
                 } else { // look in the array/hashmap
                     $result = $this->checkSubkey($value, $key, $rule, $this->lookInsideArray);
@@ -123,14 +129,16 @@ class Chequer {
                 if ($matchAll && !$result) return false;
                 if (!$matchAll && $result) return true;
             }
-            
+
             return $matchAll;
         }
     }
-    
-    protected function checkSubkey($value, $key, $rule, $lookInsideArray = false) {
-        if (!is_array($value) && !is_object($value)) throw new InvalidArgumentException('Array or object required for key matching.');
-        
+
+
+    protected function checkSubkey( $value, $key, $rule, $lookInsideArray = false ) {
+        if (!is_array($value) && !is_object($value))
+                throw new InvalidArgumentException('Array or object required for key matching.');
+
         if (is_array($value) || $value instanceof ArrayAccess) {
             if (isset($value[$key])) return $this->query($value[$key], $rule);
         }
@@ -151,56 +159,71 @@ class Chequer {
         }
         return null;
     }
-    
-    protected function checkOperatorNot($value, $rule) {
+
+
+    protected function checkOperatorNot( $value, $rule ) {
         return !$this->query($value, $rule);
     }
-    
-    protected function checkOperatorEq($value, $rule) {
+
+
+    protected function checkOperatorEq( $value, $rule ) {
         return $value === $rule;
     }
 
-    protected function checkOperatorGt($value, $rule) {
+
+    protected function checkOperatorGt( $value, $rule ) {
         return $value > $rule;
-    }    
+    }
 
-    protected function checkOperatorGte($value, $rule) {
+
+    protected function checkOperatorGte( $value, $rule ) {
         return $value >= $rule;
-    }    
+    }
 
-    protected function checkOperatorLt($value, $rule) {
+
+    protected function checkOperatorLt( $value, $rule ) {
         return $value < $rule;
-    }    
+    }
 
-    protected function checkOperatorLte($value, $rule) {
+
+    protected function checkOperatorLte( $value, $rule ) {
         return $value <= $rule;
-    }    
+    }
 
-    protected function checkOperatorBetween($value, $rule) {
-        if (!count($rule) == 2) throw new InvalidArgumentException('Two element array required for $between!');
+
+    protected function checkOperatorBetween( $value, $rule ) {
+        if (!count($rule) == 2)
+                throw new InvalidArgumentException('Two element array required for $between!');
         return $value >= $rule[0] && $value <= $rule[1];
-    }    
-    
-    protected function checkOperatorOr($value, $rule) {
+    }
+
+
+    protected function checkOperatorOr( $value, $rule ) {
         return $this->query($value, $rule, false);
     }
-    
-    protected function checkOperatorAnd($value, $rule) {
+
+
+    protected function checkOperatorAnd( $value, $rule ) {
         return $this->query($value, $rule, true);
     }
-    
-    protected function checkOperatorRegex($value, $rule) {
-        if (!is_string($value)) throw new InvalidArgumentException('String required for regex matching.');
+
+
+    protected function checkOperatorRegex( $value, $rule ) {
+        if (!is_string($value))
+                throw new InvalidArgumentException('String required for regex matching.');
         return preg_match($rule, $value) == true;
     }
 
-    protected function checkOperatorCheck($value, $rule) {
+
+    protected function checkOperatorCheck( $value, $rule ) {
         return call_user_func($rule, $value);
     }
 
-    protected function checkOperatorSize($value, $rule) {
+
+    protected function checkOperatorSize( $value, $rule ) {
         $length = is_string($value) ? mb_strlen($value) : count($value);
         return $this->query($length, $rule);
-    }     
-    
+    }
+
+
 }
