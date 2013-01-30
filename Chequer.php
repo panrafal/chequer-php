@@ -58,11 +58,11 @@ class Chequer {
             $_SERVER,
             '_SERVER' => $_SERVER,
             '_ENV' => $_ENV,
-            '_COOKIE' => $_COOKIE,
-            '_SESSION' => $_SESSION,
-            '_GET' => $_GET,
-            '_POST' => $_POST,
-            '_REQUEST' => $_REQUEST,
+            '_COOKIE' => isset($_COOKIE) ? $_COOKIE : array(),
+            '_SESSION' => isset($_SESSION) ? $_SESSION : array(),
+            '_GET' => isset($_GET) ? $_GET : array(),
+            '_POST' => isset($_POST) ? $_POST : array(),
+            '_REQUEST' => isset($_REQUEST) ? $_REQUEST : array(),
         );
         return $ch->check($table);
     }
