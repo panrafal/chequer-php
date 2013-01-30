@@ -1,29 +1,32 @@
 Chequer (like in check-and-query)
 =================================
 
-__Chequer is magicaly fast and amazingly simple. As an added bonus, it validates scalars, arrays, objects and grumpy cats!__
+__Chequer is amazingly fast and magicaly simple. As an added bonus, it matches scalars, arrays, 
+objects and grumpy cats against the query of Your choice!__
 
-It's only one lightweight class with one-but-powerfull function.
-In short - use MongoDB-like queries to match input values. 
+It's only one lightweight class with one-but-powerfull function. Ok, there are more functions, but there
+is _the one_, that makes all the fuss.
 
-What Chequer does differently, is that it does'nt use any additional classes to do it's work. It's
+In short - use MongoDB-like queries to match values. 
+
+What Chequer does differently, is that it doesn't use any additional classes to do it's work. It's
 self contained in one file and uses only one simple class.
 
 It's intentional - Chequer is **fast** and **simple**, and loading additional classes through factories is... well, *not*.
 As an added bonus (and by design), you can use plain text config files to setup your validation, and don't have to worry
 about factories and all the bloat.
 
-But what is most important - chequer is actually not designed for validation! It simply allows to check
-if something matches the query - so you *can* validate. But, it's main purpose is to check stuff,
-whether it's user input, environment variables, function results, objects etc.
+But what is most important - Chequer is actually _not designed_ for validation! It simply allows to check
+if something matches the query - so you *can* validate. But, it's a lot more than that! You can validate, 
+check and filter almost anything - be it user input, environment variables, function results, objects etc.
 
 It's also extensible - you can extend the class with your own operators, and you can use
-closures as checks.
+closures as checks. Plus it's **MIT** licensed, so share the love and contribute!
 
 Why another validation library?
 -----------------------------
 
-Simply because - it's not a validation library :) There are many others better suited for this purpose, 
+Simply because - it's not a validation library! There are many others better suited for this purpose, 
 but there are none (to my knowledge), which allow you to really quickly (in terms of code and execution) 
 check a value - be it simple string, or a complex array.
 
@@ -45,13 +48,13 @@ if (Chequer::checkEnvironment([
 ```
 
 
-
 Query language
 --------------
 Query language is modelled a bit after MongoDB. 
 At least the operators start with '$' (use single quotes or escape!) and share the same names.
 
 A `query` can be:
+* `Chequer` - the `Chequer` object with a query
 * `scalar` (`string`, `int` etc.) - the value should match the query (with type conversion - 1 == '1')
 * `null` - the value should be exactly `null`
 * `false` - the value should be exactly `false`
