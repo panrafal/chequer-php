@@ -3,7 +3,7 @@
     "type": "library",
     "description": "Fast & simple scalar/object/array checking/validation class",
     "keywords": ["php", "validate", "validation", "check", "callback", "array", "scalar", "object", "callable"],
-    "homepage": "https://github.com/panrafal/chequer-php",
+    "homepage": "http://github.com/panrafal/chequer-php",
     "license": "MIT",
     "authors": [
         {
