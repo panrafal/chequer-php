@@ -95,7 +95,7 @@ $files = new CallbackFilterIterator($files, new Chequer([
 foreach($files as $file) {}
 ```
 
-Query language
+Chequer Query Syntax
 --------------
 Query language is modelled a bit after MongoDB. 
 At least the operators start with '$' (use single quotes or escape!) and share the same names.
