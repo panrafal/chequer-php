@@ -247,6 +247,11 @@ class Chequer {
     protected function queryOperatorEq( $value, $rule ) {
         return $value === $rule;
     }
+    
+    
+    protected function queryOperatorNc( $value, $rule ) {
+        return mb_strtolower($value) === mb_strtolower($rule);
+    }
 
 
     protected function queryOperatorGt( $value, $rule ) {
@@ -289,6 +294,9 @@ class Chequer {
     protected function queryOperatorRegex( $value, $rule ) {
         if (!is_scalar($value) && !method_exists($value, '__toString'))
                 throw new InvalidArgumentException('String required for regex matching.');
+        if ($rule[0] !== '/' && $rule[0] !== '#') {
+            $rule = "#{$rule}#";
+        }
         return preg_match($rule, $value) == true;
     }
 

@@ -154,10 +154,14 @@ The currently available operators are:
   matches any query
 * `$not` => `query`  <br/>
   negates the `query`
-* `$regex` => '/regexp/'  <br/>
-  matches strings using regular expressions
+* `$regex` => '/regexp/' | '#regexp#' | 'regexp' <br/>
+  Matches strings using regular expressions.<br/>
+  With third syntax, regular expression is automatically enclosed in '#' character, so it's safe to use
+  `/` in the expression.
 * `$eq` => `compare`  <br/>
   matches value using strict operator (===)
+* `$nc` => `compare`  <br/>
+  not case-sensitive comparison (multibyte)
 * `$gt`|`$gte`|`$lt`|`$lte` => `compare` <br/>
   greater-than|lower-than comparisons
 * `$between` => [`lower`, `upper`] <br/>
