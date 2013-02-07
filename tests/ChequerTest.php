@@ -105,6 +105,15 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             'size-array' => array(true, array('array' => array('$size' => 3))),
             
             'check' => array(true, array('foo' => array('$check' => function($v) {return $v == 'bar';}))),
+                    
+                    
+            'shorthand-escape' => array(true, '$ $something', null, '$something'),
+            'shorthand-none' => array(true, '$something', null, '$something'),
+            'shorthand-regex' => array(true, '$#foo $regex /bar/'),
+            'shorthand-gt' => array(false, '$#number $gt 1'),
+            'shorthand-gte' => array(true, '$#number $>= 1'),
+                    
+                    
         );
     }
     

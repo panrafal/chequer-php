@@ -116,6 +116,13 @@ A `query` can be:
     * `int` => `query`  <br/>
       check the value with the `query`
 
+With shorthand syntax enabled, which is ON by default, you can also use:
+* `$operator rule` - it's the same as using `['$operator' => 'rule']` <br/>
+    Note that you can stack the rules, if preceding operator accepts them. `'$not $regex /foo/'` will not match "foo"!
+* `$#subkey string` - it's the same as using `['subkey' => 'rule']`
+* `$ string` - shorthand syntax escaping, the value should equal just the `string` -without the `$ ` prefix
+
+
 ### Match All (AND) / Match Any (OR) in complex queries
 
 By default, every rule in a query should match. This is the `AND` mode. Queries that match a simple
@@ -201,6 +208,9 @@ protected function queryOperatorTrue($value, $rule) {
     return true;
 }
 ```
+
+Or you can add the operator/alias to the $operators parameter.
+
 
 Note, that the whole idea is very fresh. I've come up with the concept on January 29th, and made the lib the same day. <br/>
 And that means - it *will* change!

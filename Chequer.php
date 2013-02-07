@@ -12,7 +12,17 @@ class Chequer {
     protected $query;
     protected $matchAll;
     protected $deepArrays;
+    protected $shorthandSyntax = true;
 
+    protected $operators = array(
+        '>' => 'gt',
+        '>=' => 'gte',
+        '<' => 'lt',
+        '<=' => 'lte',
+        '!' => 'not',
+        '~' => 'regex',
+    );
+    
     /**
      * @param $query Default query
      * @param $matchAll Default matchAll
@@ -30,8 +40,10 @@ class Chequer {
     }
 
 
+    /** @return self */
     public function setQuery( $query ) {
         $this->query = $query;
+        return $this;
     }
 
 
@@ -40,9 +52,12 @@ class Chequer {
     }
 
 
-    /** Enable searching for subkeys in subarrays */
+    /** Enable searching for subkeys in subarrays 
+     * @return self
+     */
     public function setDeepArrays( $deepArrays ) {
         $this->deepArrays = $deepArrays;
+        return $this;
     }
 
 
@@ -51,11 +66,30 @@ class Chequer {
     }
 
 
+    /** @return self */
     public function setMatchAll( $matchAll ) {
         $this->matchAll = $matchAll;
+        return $this;
+    }
+
+    
+    public function getShorthandSyntax() {
+        return $this->shorthandSyntax;
     }
 
 
+    /** 
+     * Enables or disables support for shorthand syntax:
+     * 
+     * "$gt 25"
+     * 
+     * @return self */
+    public function setShorthandSyntax( $shorthandSyntax ) {
+        $this->shorthandSyntax = $shorthandSyntax;
+        return $this;
+    }    
+
+    
     /** Checks rules against current server environment. 
      * Available keys are everything from $_SERVER, _ENV, _COOKIE, _SESSION, _GET, _POST, _REQUEST.
      * 
@@ -106,45 +140,76 @@ class Chequer {
      *  */
     public function query( $value, $query, $matchAll = null ) {
         if ($query === null || $query === false) {
+            // null and false are compared strictly
             return $value === $query;
         } elseif (is_scalar($query)) {
-            if (is_array($value) && is_bool($query) == false) {
+            if ($this->shorthandSyntax && is_string($query) && !empty($query) && $query{0} == '$') {
+                // shorthand syntax
+                if (($spacePos = strpos($query, ' ')) > 0) {
+                    if ($spacePos > 1) {
+                        // rebuild the query
+                        $query = array(
+                            // handle '$#subkey' syntax
+                            $query[1] == '#' ? substr($query, 2, $spacePos - 2) : substr($query, 0, $spacePos) => substr($query, $spacePos + 1)
+                        );
+                    } else {
+                        // '$ $something' should be escaped to '$something'
+                        return $value == substr($query, 2);
+                    }
+                } else {
+                    // if there is no space, the query is NOT a shorthand syntax!
+                    return $value == $query;
+                }
+            } elseif (is_array($value) && is_bool($query) == false) {
+                // string/number queries are searched in arrays
                 return in_array($query, $value);
             } else {
+                // other scalar queries are compared non-strictly
                 return $value == $query;
             }
         } elseif (is_object($query) && is_callable($query)) {
             if ($query instanceof Chequer) return $query->check($value, $matchAll);
             return call_user_func($query, $value, $query, $matchAll);
-        } else {
-            if ($matchAll === null)
-                    $matchAll = false === (isset($query[0]) && is_scalar($query[0]));
-            foreach ($query as $key => $rule) {
-                $result = null;
-                if (is_int($key)) {
-                    $result = $this->query($value, $rule);
-                } elseif ($key{0} === '$') {
-                    if ($key === '$') {
-                        $matchAll = ($rule === 'OR' || $rule === 'or') ? false : $rule;
-                    } else {
-                        $result = $this->queryOperator($key, $value, $rule);
-                    }
-                } else { // look in the array/hashmap
-                    $result = $this->querySubkey($value, $key, $rule, $this->deepArrays);
-                    if ($result === null) $result = $this->query(null, $rule);
-                }
-                if ($result === null) continue;
-                if ($matchAll && !$result) return false;
-                if (!$matchAll && $result) return true;
-            }
-
-            return $matchAll;
         }
+        
+        // query is an array....
+        
+        if ($matchAll === null)
+                $matchAll = false === (isset($query[0]) && is_scalar($query[0]));
+        
+        foreach ($query as $key => $rule) {
+            $result = null;
+            if (is_int($key)) {
+                $result = $this->query($value, $rule);
+            } elseif ($key{0} === '$') {
+                if ($key === '$') {
+                    $matchAll = ($rule === 'OR' || $rule === 'or') ? false : $rule;
+                } else {
+                    $result = $this->queryOperator(substr($key, 1), $value, $rule);
+                }
+            } else { // look in the array/hashmap
+                $result = $this->querySubkey($value, $key, $rule, $this->deepArrays);
+                // for unknown keys check null value
+                if ($result === null) $result = $this->query(null, $rule);
+            }
+            if ($result === null) continue;
+            if ($matchAll && !$result) return false;
+            if (!$matchAll && $result) return true;
+        }
+
+        return $matchAll;
     }
 
     
     protected function queryOperator($operator, $value, $rule) {
-        return call_user_func(array($this, 'queryOperator' . ucfirst(substr($operator, 1))), $value, $rule);
+        if (isset($this->operators[$operator])) {
+            if (is_string($this->operators[$operator])) {
+                $operator = $this->operators[$operator];
+            } else {
+                return call_user_func($this->operators[$operator], $value, $rule);
+            }
+        }
+        return call_user_func(array($this, 'queryOperator' . ucfirst($operator)), $value, $rule);
     }
     
 
