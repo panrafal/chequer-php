@@ -152,9 +152,9 @@ The currently available operators are:
   matches all queries
 * `$or` => [`query`, `query`, ...]  <br/>
   matches any query
-* `$not` => `query`  <br/>
+* `$not` | `$!` => `query`  <br/>
   negates the `query`
-* `$regex` => '/regexp/' | '#regexp#' | 'regexp' <br/>
+* `$regex` | `$~` => '/regexp/' | '#regexp#' | 'regexp' <br/>
   Matches strings using regular expressions.<br/>
   With third syntax, regular expression is automatically enclosed in '#' character, so it's safe to use
   `/` in the expression.
@@ -162,7 +162,7 @@ The currently available operators are:
   matches value using strict operator (===)
 * `$nc` => `compare`  <br/>
   not case-sensitive comparison (multibyte)
-* `$gt`|`$gte`|`$lt`|`$lte` => `compare` <br/>
+* `$gt`|`$gte`|`$lt`|`$lte` | `$>`|`$>=`|`$<`|`$<=` => `compare` <br/>
   greater-than|lower-than comparisons
 * `$between` => [`lower`, `upper`] <br/>
   checks if value is between lower and upper bounds (inclusive)
