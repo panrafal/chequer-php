@@ -127,7 +127,7 @@ class Chequer {
                     if ($key === '$') {
                         $matchAll = ($rule === 'OR' || $rule === 'or') ? false : $rule;
                     } else {
-                        $result = call_user_func(array($this, 'queryOperator' . ucfirst(substr($key, 1))), $value, $rule);
+                        $result = $this->queryOperator($key, $value, $rule);
                     }
                 } else { // look in the array/hashmap
                     $result = $this->querySubkey($value, $key, $rule, $this->deepArrays);
@@ -142,6 +142,11 @@ class Chequer {
         }
     }
 
+    
+    protected function queryOperator($operator, $value, $rule) {
+        return call_user_func(array($this, 'queryOperator' . ucfirst(substr($operator, 1))), $value, $rule);
+    }
+    
 
     protected function querySubkey( $value, $key, $rule, $deepArrays = false ) {
         if (!is_array($value) && !is_object($value))
