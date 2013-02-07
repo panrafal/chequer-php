@@ -178,9 +178,30 @@ The currently available operators are:
   matches if callable($value) returns TRUE
 * `$size` => `query` <br/>
   checks the size of array or string using the `query`
+* `$cmp` => [`value1`, `operator`, `value2`] | '`value1` `operator` `value2`'<br/>
+  compares two `values` using the `operator`. Values should be provided in dot notation.<br/>
+  Value of `value2` can be used as a `rule`, or anything that is accepted by the operators.<br/>
+  `'$cmp .subkey > .anothersubkey'`
 
-  This will match empty strings or between 3 and 20 characters long. <br/>
-  `Chequer::checkValue('foobar', ['$size' => [false, '$between' => [3, 20]]])`
+  You can skip the first value, to simply use current value:
+  ```php
+  ['.subkey' => '$cmp > .anothersubkey']
+  ```
+
+  You can skip the first value and the operator, to use the value of `value2` as a query:
+  ```php
+  // this is equivalent to `Chequer::checkValue('foo', ['foo', 'bar']);`
+  (new Chequer(['$cmp' => '@example']))
+      ->addTypecasts('example' => ['foo', 'bar'])
+      ->check('foo');
+
+  // this is equivalent to `Chequer::checkValue('foo', '$~ .*foo.*');`
+  (new Chequer(['$cmp' => '@example']))
+      ->addTypecasts('example' => ['$regex' => '$~ .*foo.*'])
+      ->check('foo');
+  ```
+
+
 
 ### Subkeys
 
@@ -190,9 +211,10 @@ Subkey can be:
 * object's method with '()' suffix <br/>
   `Chequer::checkValue(new SplFileInfo(), ['getSize()' => ['$gt' => 0]])`
 
-You can access deep subkeys at once by using the `dot notation`. You have to start with a `.` (dot)
-and join subkeys with a dot like this: `.subkey.method().another_one`. If you have a subkey with a
-dot, use standard notation without the `.` prefix, like this: `subkey.with.a.dot`.
+You can access multiple subkeys at once by using the `dot notation`. You have to start with a `.` (dot)
+and join subkeys with a dot like this: `.subkey.method().another_one`. To reference the value itself,
+use the `.` itself. <br/>
+If you have a subkey with a dot, use standard notation without the `.` prefix, like this: `subkey.with.a.dot`.
 
 If the subkey does not exist in the value, and the value is an 0-indexed array, Chequer will traverse this
 array in search for the first array/object having this key. You can control this behaviour by using

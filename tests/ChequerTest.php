@@ -146,6 +146,15 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             'same-true' => array(true, 1, array('$same' => 1)),
             'same-false' => array(false, 1, array('$same' => '1')),
             'same-short-false' => array(false, 1, '$== 1'),
+            
+            'cmp3' => array(true, array('one' => 1, 'two' => 2), '$cmp .two > .one'),
+            // checks if size of the array is 2
+            'cmp2' => array(true, array('one' => 1, 'two' => 2), '$cmp size .two'),
+            'cmp2-dollar' => array(true, array('one' => 1, 'two' => 2), '$cmp $size .two'),
+            // checks if array(1,2) contains value 2
+            'cmp-dollar' => array(true, array(1, 2), '$cmp .1'),
+            // checks if array(1,2) equals itself
+            'cmp-dollar' => array(true, array(1, 2), '$cmp .'),
             );
     }    
 

@@ -245,6 +245,7 @@ class Chequer {
         // dot notation
         if ($key[0] === '.') {
             $key = substr($key, 1);
+            if (!$key) return $value;
             while (($nextKey = strpos($key, '.', 1)) !== false) {
                 $value = $this->getSubkeyValue($value, substr($key, 0, $nextKey), $deepArrays - 1);
                 if ($value === null) return null;
@@ -370,6 +371,29 @@ class Chequer {
     protected function operator_size( $value, $rule ) {
         $length = is_string($value) ? mb_strlen($value) : count($value);
         return $this->query($length, $rule);
+    }
+
+
+    protected function operator_cmp( $value, $rule ) {
+        if (is_string($rule)) $rule = explode(' ', $rule, 3);
+        
+        if (count($rule) > 2) {
+            $value1 = $this->getSubkeyValue($value, array_shift($rule));
+        } else $value1 = $value;
+        
+        if (count($rule) > 1) {
+            $operator = array_shift($rule);
+        } else $operator = false;
+        
+        $value2 = $this->getSubkeyValue($value, array_shift($rule));
+
+        if (!$operator) {
+            return $this->query($value1, $value2);
+        } elseif (is_numeric($operator) || $operator[0] == '$' || $operator[0] == '.' || $operator[0] == '@') {
+            return $this->query($value1, array($operator => $value2));
+        } else {
+            return $this->operator($operator, $value1, $value2);
+        }
     }
 
 
