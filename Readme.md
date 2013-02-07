@@ -7,7 +7,7 @@ __As an added bonus, it matches scalars, arrays, objects and grumpy cats against
 It's only one lightweight class with one-but-powerfull function. Ok, there are more functions, but there
 is _the one_, that makes all the fuss.
 
-In short - use __MongoDB-like queries__ to __match values__. 
+In short - use __queries__ to __match values__. 
 
 What Chequer does differently, is that it doesn't use any additional classes to do it's work. It's
 self contained in one file and uses only one simple class.
@@ -113,13 +113,15 @@ A `query` can be:
       `true` will set this query to `AND` mode, `false` will set it to `OR`
     * `string` => `query`  <br/>
       check the value's `subkey` with the `query` - ([see below](#subkeys))
+    * `.subkey1.subkey2` => `query`
+      check the value's two (and more) `subkey`s deep with the `query` - ([see below](#subkeys))
     * `int` => `query`  <br/>
       check the value with the `query`
 
 With shorthand syntax enabled, which is ON by default, you can also use:
 * `$operator rule` - it's the same as using `['$operator' => 'rule']` <br/>
     Note that you can stack the rules, if preceding operator accepts them. `'$not $regex /foo/'` will not match "foo"!
-* `$.subkey string` - it's the same as using `['subkey' => 'rule']`
+* `$.subkey string` - it's the same as using `['.subkey' => 'rule']`
 * `$ string` - shorthand syntax escaping, the value should equal just the `string` -without the `$ ` prefix
 
 
@@ -182,10 +184,13 @@ Subkey can be:
 * object's method with '()' suffix <br/>
   `Chequer::checkValue(new SplFileInfo(), ['getSize()' => ['$gt' => 0]])`
 
-If the subkey does not exist in the value, and the value is an 0-indexed array, Chequer will traverse this
-array in search for the first array/object having this key.
+You can access deep subkeys at once by using the `dot notation`. You have to start with a `.` (dot)
+and join subkeys with a dot like this: `.subkey.method().another_one`. If you have a subkey with a
+dot, use standard notation without the `.` prefix, like this: `subkey.with.a.dot`.
 
-Note however, that two different queries may match in two different subitems.
+If the subkey does not exist in the value, and the value is an 0-indexed array, Chequer will traverse this
+array in search for the first array/object having this key. You can control this behaviour by using
+`setDeepArrays()`. Note, that two different queries may match in two different subitems.
 
 Like here:
 ```php

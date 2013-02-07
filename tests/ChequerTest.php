@@ -40,9 +40,9 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
 
 
     /**
-     * @dataProvider checkProvider
+     * @dataProvider checkArrayProvider
      */
-    public function testCheck( $expected, $rules, $matchAll = null, $data = null ) {
+    public function testCheckArray( $expected, $rules, $matchAll = null, $data = null ) {
         if (func_num_args() < 4) $data = $this->data;
         if (is_string($expected)) $this->setExpectedException($expected);
         $chequer = $this->buildChequer($rules, $matchAll);
@@ -50,7 +50,7 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
     }
 
 
-    public function checkProvider() {
+    public function checkArrayProvider() {
         return array(
             'scalar_scalar-true' => array(true, 'foo', null, 'foo'),
             'scalar_scalar-false' => array(false, 'bar', null, 'foo'),
@@ -67,6 +67,9 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             'hashmap_exists' => array(true, array('foo' => true)),
             'hashmap_sub-true' => array(true, array('hashmap' => array('one' => 'ONE'))),
             'hashmap_sub-false' => array(false, array('hashmap' => array('missing' => 1))),
+            'hashmap_sub-short-true' => array(true, array('.hashmap.one' => 'ONE')),
+            'hashmap_subsub-short-true' => array(true, array('.hashmap.sub.foo' => 'BAR')),
+            'hashmap_subsub-short-false' => array(false, array('hashmap.sub.foo' => 'BAR')),
             
             'array_array-true' => array(true, array('array' => array(1,2,4))),
             'array_array-false' => array(false, array('array' => array(4,5))),

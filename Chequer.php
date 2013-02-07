@@ -52,7 +52,8 @@ class Chequer {
     }
 
 
-    /** Enable searching for subkeys in subarrays 
+    /** Enable searching for subkeys in subarrays. Set it to the deepest level this function
+     * should work.
      * @return self
      */
     public function setDeepArrays( $deepArrays ) {
@@ -214,6 +215,14 @@ class Chequer {
 
     
     protected function getSubkeyValue( $value, $key, $deepArrays = 0 ) {
+        if ($key[0] == '.') {
+            $key = substr($key, 1);
+            while (($nextKey = strpos($key, '.', 1)) !== false) {
+                $value = $this->getSubkeyValue($value, substr($key, 0, $nextKey), $deepArrays - 1);
+                if ($value === null) return null;
+                $key = substr($key, $nextKey + 1);
+            }
+        }
         if (!is_array($value) && !is_object($value))
                 throw new InvalidArgumentException('Array or object required for key matching.');
 
@@ -226,7 +235,7 @@ class Chequer {
                 return call_user_func(array($value, $method));
             }
         }
-        if ($deepArrays && is_array($value) && isset($value[0])) {
+        if ($deepArrays > 0 && is_array($value) && isset($value[0])) {
             --$deepArrays;
             for ($i = 0, $length = count($value); $i < $length, isset($value[$i]); ++$i) {
                 $subvalue = $value[$i];
