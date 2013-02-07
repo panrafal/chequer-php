@@ -119,7 +119,7 @@ A `query` can be:
 With shorthand syntax enabled, which is ON by default, you can also use:
 * `$operator rule` - it's the same as using `['$operator' => 'rule']` <br/>
     Note that you can stack the rules, if preceding operator accepts them. `'$not $regex /foo/'` will not match "foo"!
-* `$#subkey string` - it's the same as using `['subkey' => 'rule']`
+* `$.subkey string` - it's the same as using `['subkey' => 'rule']`
 * `$ string` - shorthand syntax escaping, the value should equal just the `string` -without the `$ ` prefix
 
 

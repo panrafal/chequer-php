@@ -149,8 +149,8 @@ class Chequer {
                     if ($spacePos > 1) {
                         // rebuild the query
                         $query = array(
-                            // handle '$#subkey' syntax
-                            $query[1] == '#' ? substr($query, 2, $spacePos - 2) : substr($query, 0, $spacePos) => substr($query, $spacePos + 1)
+                            // handle '$.subkey' syntax
+                            $query[1] == '.' ? substr($query, 2, $spacePos - 2) : substr($query, 0, $spacePos) => substr($query, $spacePos + 1)
                         );
                     } else {
                         // '$ $something' should be escaped to '$something'
