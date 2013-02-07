@@ -131,12 +131,16 @@ Consider these examples
 * *AND* `['$regex' => 'foo', '$not' => 'foobar']`
 * *OR* `['foo', 'bar']` because it's an array of scalars
 * *OR* `['foo', '$regex' => 'bar']` because element with index 0 is a scalar
-* *OR* `['$' => false, '$regex' => 'foo', '$not' => 'foobar']` because of `'$'=>false`
+* *OR* `['$' => 'OR', '$regex' => 'foo', '$not' => 'foobar']` because of `'$'=>'OR'`
 * *OR* `['$or' => ['$regex' => 'foo', '$not' => 'foobar']]` because of `$or`
 
 ### Operators
 
 The currently available operators are:
+* `$` => true | 1 | "AND" <br/>
+  Enables AND mode, requiring every rule to match
+* `$` => false | 0 | "OR" <br/>
+  Enables OR mode, only single rule has to match
 * `$and` => [`query`, `query`, ...]  <br/>
   matches all queries
 * `$or` => [`query`, `query`, ...]  <br/>

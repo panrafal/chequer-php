@@ -1,5 +1,12 @@
 <?php
-
+/*
+ * CHEQUER for PHP
+ * 
+ * Copyright (c)2013 Rafal Lindemann <rl@stamina.pl>
+ * 
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code. * 
+ */
 class Chequer {
 
     protected $query;
@@ -118,7 +125,7 @@ class Chequer {
                     $result = $this->query($value, $rule);
                 } elseif ($key{0} === '$') {
                     if ($key === '$') {
-                        $matchAll = $rule;
+                        $matchAll = ($rule === 'OR' || $rule === 'or') ? false : $rule;
                     } else {
                         $result = call_user_func(array($this, 'queryOperator' . ucfirst(substr($key, 1))), $value, $rule);
                     }
@@ -210,7 +217,7 @@ class Chequer {
 
 
     protected function queryOperatorRegex( $value, $rule ) {
-        if (!is_string($value))
+        if (!is_scalar($value) && !method_exists($value, '__toString'))
                 throw new InvalidArgumentException('String required for regex matching.');
         return preg_match($rule, $value) == true;
     }

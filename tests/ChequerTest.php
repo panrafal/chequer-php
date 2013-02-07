@@ -86,10 +86,13 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             'or2_param' => array(true, array('foo' => 'bar', 'number' => 2), false),
             
             'or_switch' => array(true, array('$' => false, 'foo' => 'bar', 'missing' => true)),
+            'or_switch2' => array(true, array('$' => 'OR', 'foo' => 'bar', 'missing' => true)),
             'or_group' => array(true, array('$or' => array('foo' => 'bar', 'missing' => true))),
             'or_auto' => array(true, array('something', 'foo' => 'bar', 'missing' => true)),
             
             'and_force' => array(false, array('something', 'foo' => 'bar', 'missing' => true), true),
+            'and_switch' => array(false, array('$' => 'AND', 'foo' => 'bar', 'missing' => true), true),
+            'and_switch2' => array(false, array('$' => true, 'foo' => 'bar', 'missing' => true), true),
             
             'gt' => array(false, array('number' => array('$gt' => 1))),
             'gte' => array(true, array('number' => array('$gte' => 1))),
