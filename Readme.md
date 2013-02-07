@@ -209,11 +209,11 @@ Note however, that `['hello' => 'bye']` will not match, because the first elemen
 
 ### Extending
 
-Simply define protected function with the name queryOperator*
+Simply define protected function with the name operator_*
 
 To define the `$true` operator:
 ```php
-protected function queryOperatorTrue($value, $rule) {
+protected function operator_true($value, $rule) {
     return true;
 }
 ```

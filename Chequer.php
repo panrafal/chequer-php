@@ -186,7 +186,7 @@ class Chequer {
                 if ($key === '$') {
                     $matchAll = ($rule === 'OR' || $rule === 'or') ? false : $rule;
                 } else {
-                    $result = $this->queryOperator(substr($key, 1), $value, $rule);
+                    $result = $this->operator(substr($key, 1), $value, $rule);
                 }
             } else { // look in the array/hashmap
                 $result = $this->querySubkey($value, $key, $rule, $this->deepArrays);
@@ -202,7 +202,7 @@ class Chequer {
     }
 
     
-    protected function queryOperator($operator, $value, $rule) {
+    protected function operator($operator, $value, $rule) {
         if (isset($this->operators[$operator])) {
             if (is_string($this->operators[$operator])) {
                 $operator = $this->operators[$operator];
@@ -210,7 +210,7 @@ class Chequer {
                 return call_user_func($this->operators[$operator], $value, $rule);
             }
         }
-        return call_user_func(array($this, 'queryOperator' . ucfirst($operator)), $value, $rule);
+        return call_user_func(array($this, 'operator_' . $operator), $value, $rule);
     }
 
     
@@ -255,59 +255,59 @@ class Chequer {
     }
 
 
-    protected function queryOperatorNot( $value, $rule ) {
+    protected function operator_not( $value, $rule ) {
         return !$this->query($value, $rule);
     }
 
 
-    protected function queryOperatorEq( $value, $rule ) {
+    protected function operator_eq( $value, $rule ) {
         return $value === $rule;
     }
     
     
-    protected function queryOperatorNc( $value, $rule ) {
+    protected function operator_nc( $value, $rule ) {
         return mb_strtolower($value) === mb_strtolower($rule);
     }
 
 
-    protected function queryOperatorGt( $value, $rule ) {
+    protected function operator_gt( $value, $rule ) {
         return $value > $rule;
     }
 
 
-    protected function queryOperatorGte( $value, $rule ) {
+    protected function operator_gte( $value, $rule ) {
         return $value >= $rule;
     }
 
 
-    protected function queryOperatorLt( $value, $rule ) {
+    protected function operator_lt( $value, $rule ) {
         return $value < $rule;
     }
 
 
-    protected function queryOperatorLte( $value, $rule ) {
+    protected function operator_lte( $value, $rule ) {
         return $value <= $rule;
     }
 
 
-    protected function queryOperatorBetween( $value, $rule ) {
+    protected function operator_between( $value, $rule ) {
         if (count($rule) != 2)
                 throw new InvalidArgumentException('Two element array required for $between!');
         return $value >= $rule[0] && $value <= $rule[1];
     }
 
 
-    protected function queryOperatorOr( $value, $rule ) {
+    protected function operator_or( $value, $rule ) {
         return $this->query($value, $rule, false);
     }
 
 
-    protected function queryOperatorAnd( $value, $rule ) {
+    protected function operator_and( $value, $rule ) {
         return $this->query($value, $rule, true);
     }
 
 
-    protected function queryOperatorRegex( $value, $rule ) {
+    protected function operator_regex( $value, $rule ) {
         if (!is_scalar($value) && !method_exists($value, '__toString'))
                 throw new InvalidArgumentException('String required for regex matching.');
         if ($rule[0] !== '/' && $rule[0] !== '#') {
@@ -317,12 +317,12 @@ class Chequer {
     }
 
 
-    protected function queryOperatorCheck( $value, $rule ) {
+    protected function operator_check( $value, $rule ) {
         return call_user_func($rule, $value);
     }
 
 
-    protected function queryOperatorSize( $value, $rule ) {
+    protected function operator_size( $value, $rule ) {
         $length = is_string($value) ? mb_strlen($value) : count($value);
         return $this->query($length, $rule);
     }
