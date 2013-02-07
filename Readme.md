@@ -161,6 +161,8 @@ The currently available operators are:
   With third syntax, regular expression is automatically enclosed in '#' character, so it's safe to use
   `/` in the expression.
 * `$eq` => `compare`  <br/>
+  matches value using loose operator (==)
+* `$same` => `compare`  <br/>
   matches value using strict operator (===)
 * `$nc` => `compare`  <br/>
   not case-sensitive comparison (multibyte)

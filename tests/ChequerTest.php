@@ -80,7 +80,10 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             'regex_array' => array('Exception', array('hashmap' => array('$regex' => '/[A-Z]+/'))),
             
             'eq-true' => array(true, array('number' => array('$eq' => 1))),
-            'eq-false' => array(false, array('number' => array('$eq' => '1'))),
+            'eq-true2' => array(true, array('number' => array('$eq' => '1'))),
+            'eq-true3' => array(true, array('number' => array('$eq' => '01'))),
+            'same-true' => array(true, array('number' => array('$same' => 1))),
+            'same-false' => array(false, array('number' => array('$same' => '1'))),
             
             'and' => array(true, array('foo' => 'bar', 'number' => 1)),
             'and-false' => array(false, array('foo' => 'bar', 'number' => 2)),

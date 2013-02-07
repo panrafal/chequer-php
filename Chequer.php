@@ -15,6 +15,8 @@ class Chequer {
     protected $shorthandSyntax = true;
 
     protected $operators = array(
+        '=' => 'eq',
+        '==' => 'same',
         '>' => 'gt',
         '>=' => 'gte',
         '<' => 'lt',
@@ -259,8 +261,13 @@ class Chequer {
         return !$this->query($value, $rule);
     }
 
-
+    
     protected function operator_eq( $value, $rule ) {
+        return $value == $rule;
+    }
+    
+
+    protected function operator_same( $value, $rule ) {
         return $value === $rule;
     }
     
