@@ -112,9 +112,9 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
                     
             'shorthand-escape' => array(true, '$ $something', null, '$something'),
             'shorthand-none' => array(true, '$something', null, '$something'),
-            'shorthand-regex' => array(true, '$#foo $regex /bar/'),
-            'shorthand-gt' => array(false, '$#number $gt 1'),
-            'shorthand-gte' => array(true, '$#number $>= 1'),
+            'shorthand-regex' => array(true, '$.foo $regex /bar/'),
+            'shorthand-gt' => array(false, '$.number $gt 1'),
+            'shorthand-gte' => array(true, '$.number $>= 1'),
                     
                     
         );

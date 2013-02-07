@@ -211,31 +211,38 @@ class Chequer {
         }
         return call_user_func(array($this, 'queryOperator' . ucfirst($operator)), $value, $rule);
     }
-    
 
-    protected function querySubkey( $value, $key, $rule, $deepArrays = false ) {
+    
+    protected function getSubkeyValue( $value, $key, $deepArrays = 0 ) {
         if (!is_array($value) && !is_object($value))
                 throw new InvalidArgumentException('Array or object required for key matching.');
 
         if (is_array($value) || $value instanceof ArrayAccess) {
-            if (isset($value[$key])) return $this->query($value[$key], $rule);
+            if (isset($value[$key])) return $value[$key];
         }
         if (is_object($value)) {
-            if (isset($value->$key)) return $this->query($value[$key], $rule);
+            if (isset($value->$key)) return $value[$key];
             if (($method = strstr($key, '(', true)) && method_exists($value, $method)) {
-                return $this->query(call_user_func(array($value, $method)), $rule);
+                return call_user_func(array($value, $method));
             }
         }
         if ($deepArrays && is_array($value) && isset($value[0])) {
+            --$deepArrays;
             for ($i = 0, $length = count($value); $i < $length, isset($value[$i]); ++$i) {
                 $subvalue = $value[$i];
                 if (is_array($subvalue) || is_object($subvalue)) {
-                    $subresult = $this->querySubkey($subvalue, $key, $rule);
+                    $subresult = $this->getSubkeyValue($subvalue, $key, $deepArrays);
                     if ($subresult !== null) return $subresult;
                 }
             }
         }
         return null;
+    }
+    
+
+    protected function querySubkey( $value, $key, $rule, $deepArrays = 0 ) {
+        $value = $this->getSubkeyValue($value, $key, $deepArrays);
+        return $this->query($value, $rule);
     }
 
 
