@@ -378,14 +378,16 @@ class Chequer {
         if (is_string($rule)) $rule = explode(' ', $rule, 3);
         
         if (count($rule) > 2) {
-            $value1 = $this->getSubkeyValue($value, array_shift($rule));
+            $value1 = array_shift($rule);
+            if (is_scalar($value1)) $value1 = $this->getSubkeyValue($value, $value1);
         } else $value1 = $value;
         
         if (count($rule) > 1) {
             $operator = array_shift($rule);
         } else $operator = false;
         
-        $value2 = $this->getSubkeyValue($value, array_shift($rule));
+        $value2 = array_shift($rule);
+        if (is_scalar($value2)) $value2 = $this->getSubkeyValue($value, $value2);
 
         if (!$operator) {
             return $this->query($value1, $value2);

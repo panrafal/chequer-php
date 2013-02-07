@@ -179,11 +179,17 @@ The currently available operators are:
 * `$size` => `query` <br/>
   checks the size of array or string using the `query`
 * `$cmp` => [`value1`, `operator`, `value2`] | '`value1` `operator` `value2`'<br/>
-  compares two `values` using the `operator`. Values should be provided in dot notation.<br/>
-  Value of `value2` can be used as a `rule`, or anything that is accepted by the operators.<br/>
-  `'$cmp .subkey > .anothersubkey'`
+  compares two `values` using the `operator`. Values should be subkeys provided in dot notation.<br/>
+  Value of `value2` will be passed to operators as-is. This means it can be used as a query!
+  ```php
+  '$cmp .subkey > .anothersubkey'`
+  ```
 
-  You can skip the first value, to simply use current value:
+  Please note, that both values are subkeys! You can use single dot (`.`) to reference current value,
+  or `typecast`s, but you cannot use plain strings! `'$cmp > 20'` will look for 20th element in an
+  array. To compare to arbitrary values use the operator in normal way - `$> 20`. 
+
+  To use the current value, skip the `value1`:
   ```php
   ['.subkey' => '$cmp > .anothersubkey']
   ```
