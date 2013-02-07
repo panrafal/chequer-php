@@ -34,7 +34,7 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
 
 
     /** @return Chequer */
-    public function buildChequer( $rules, $matchAll ) {
+    public function buildChequer( $rules, $matchAll = null ) {
         return new Chequer($rules, $matchAll);
     }
 
@@ -79,11 +79,6 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             'regex-short-true' => array(true, array('$regex' => 'bar'), false, 'foobar'),
             'regex_array' => array('Exception', array('hashmap' => array('$regex' => '/[A-Z]+/'))),
             
-            'eq-true' => array(true, array('number' => array('$eq' => 1))),
-            'eq-true2' => array(true, array('number' => array('$eq' => '1'))),
-            'eq-true3' => array(true, array('number' => array('$eq' => '01'))),
-            'same-true' => array(true, array('number' => array('$same' => 1))),
-            'same-false' => array(false, array('number' => array('$same' => '1'))),
             
             'and' => array(true, array('foo' => 'bar', 'number' => 1)),
             'and-false' => array(false, array('foo' => 'bar', 'number' => 2)),
@@ -99,6 +94,7 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             
             'and_force' => array(false, array('something', 'foo' => 'bar', 'missing' => true), true),
             'and_switch' => array(false, array('$' => 'AND', 'foo' => 'bar', 'missing' => true), true),
+            'and_switch-true' => array(true, array('$' => 'AND', 'foo' => 'bar', 'missing' => null), false),
             'and_switch2' => array(false, array('$' => true, 'foo' => 'bar', 'missing' => true), true),
             
             'gt' => array(false, array('number' => array('$gt' => 1))),
@@ -125,6 +121,67 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
                     
         );
     }
+
+    
+    /**
+     * @dataProvider checkOperatorsProvider
+     */
+    public function testCheckOperators( $expected, $data, $rules ) {
+        if (is_string($expected)) $this->setExpectedException($expected);
+        $chequer = $this->buildChequer($rules);
+        $this->assertEquals($expected, $chequer->check($data));
+    }
+
+    
+    public function checkOperatorsProvider() {
+        return array(
+            'true' => array(true, 1, '1'),
+            'false' => array(false, 1, 'blah'),
+            'not-false' => array(false, 1, '$not 1'),
+            'not-true' => array(true, 1, '$not blah'),
+            
+            'eq-true' => array(true, 1, array('$eq' => 1)),
+            'eq-true2' => array(true, 1, array('$eq' => '1')),
+            'eq-true3' => array(true, 1, array('$eq' => '01')),
+            'same-true' => array(true, 1, array('$same' => 1)),
+            'same-false' => array(false, 1, array('$same' => '1')),
+            'same-short-false' => array(false, 1, '$== 1'),
+            );
+    }    
+
+    
+    /**
+     * @dataProvider checkTypecastsProvider
+     */
+    public function testCheckTypecasts( $expected, $data, $typecasts, $rules ) {
+        if (is_string($expected)) $this->setExpectedException($expected);
+        $chequer = $this->buildChequer($rules);
+        $chequer->addTypecasts($typecasts);
+        $this->assertEquals($expected, $chequer->check($data));
+    }
+
+    
+    public function checkTypecastsProvider() {
+        $closure = function($a = null) {return $a . 'bar';};
+        $closureArray = function($a = null) {return array('foo' => 'bar', 'bar' => $a);};
+        return array(
+            'value' => array(true, false, array('test' => 'foo'), '$.@test foo'),
+            'notcallable' => array('Exception', false, array('test' => 'foo'), '$.@test() foo'),
+            'closure-use' => array(true, 'foo', array('test' => $closure), '$.@test bar'),
+            'closure-typecast' => array(true, 'foo', array('test' => $closure), '$.@test() foobar'),
+            'closurearray-use' => array(true, 
+                    'foo', 
+                    array('test' => $closureArray), 
+                    array('$' => 'AND', '$.@test.foo bar', array('.@test.bar' => null))
+                ),
+            'closurearray-typecast' => array(true, 
+                    'foo', 
+                    array('test' => $closureArray), 
+                    array('$' => 'AND', '$.@test().foo bar', '$.@test().bar foo')
+                ),
+            );
+    }    
+    
     
     public function testCheckEnvironment() {
         $_ENV['TEST'] = 123;

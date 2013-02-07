@@ -25,6 +25,8 @@ class Chequer {
         '~' => 'regex',
     );
     
+    protected $typecasts = array();
+    
     /**
      * @param $query Default query
      * @param $matchAll Default matchAll
@@ -80,7 +82,7 @@ class Chequer {
         return $this->shorthandSyntax;
     }
 
-
+    
     /** 
      * Enables or disables support for shorthand syntax:
      * 
@@ -91,6 +93,13 @@ class Chequer {
         $this->shorthandSyntax = $shorthandSyntax;
         return $this;
     }    
+
+    
+    /** @return self */
+    public function addTypecasts($typecasts) {
+        $this->typecasts = array_merge($this->typecasts, $typecasts);
+        return $this;
+    }
 
     
     /** Checks rules against current server environment. 
@@ -153,7 +162,7 @@ class Chequer {
                         // rebuild the query
                         $query = array(
                             // handle '$.subkey' syntax
-                            $query[1] == '.' ? substr($query, 2, $spacePos - 2) : substr($query, 0, $spacePos) => substr($query, $spacePos + 1)
+                            $query[1] == '.' ? substr($query, 1, $spacePos - 1) : substr($query, 0, $spacePos) => substr($query, $spacePos + 1)
                         );
                     } else {
                         // '$ $something' should be escaped to '$something'
@@ -171,12 +180,12 @@ class Chequer {
                 return $value == $query;
             }
         } elseif (is_object($query) && is_callable($query)) {
+            // callable queries
             if ($query instanceof Chequer) return $query->check($value, $matchAll);
             return call_user_func($query, $value, $query, $matchAll);
         }
         
         // query is an array....
-        
         if ($matchAll === null)
                 $matchAll = false === (isset($query[0]) && is_scalar($query[0]));
         
@@ -186,7 +195,7 @@ class Chequer {
                 $result = $this->query($value, $rule);
             } elseif ($key{0} === '$') {
                 if ($key === '$') {
-                    $matchAll = ($rule === 'OR' || $rule === 'or') ? false : $rule;
+                    $matchAll = ($rule === 'OR' || $rule === 'or') ? false : $rule == true;
                 } else {
                     $result = $this->operator(substr($key, 1), $value, $rule);
                 }
@@ -215,9 +224,26 @@ class Chequer {
         return call_user_func(array($this, 'operator_' . $operator), $value, $rule);
     }
 
+
+    /** Calls or returns a typecast object */
+    protected function typecast($typecast, $callArgs = array()) {
+        if (isset($this->typecasts[$typecast])) {
+            $typecastObj = $this->typecasts[$typecast];
+            if (count($callArgs) == 0 && ($typecastObj instanceof Closure) == false) {
+                return $typecastObj;
+            } elseif (!is_scalar($typecastObj) && is_callable($typecastObj)) {
+                return call_user_func_array($typecastObj, $callArgs);
+            } else {
+                throw new Exception("Typecast '$typecast' cannot be called!");
+            }
+        }
+        return call_user_func(array($this, 'typecast_' . $typecast), $callArgs);
+    }
+    
     
     protected function getSubkeyValue( $value, $key, $deepArrays = 0 ) {
-        if ($key[0] == '.') {
+        // dot notation
+        if ($key[0] === '.') {
             $key = substr($key, 1);
             while (($nextKey = strpos($key, '.', 1)) !== false) {
                 $value = $this->getSubkeyValue($value, substr($key, 0, $nextKey), $deepArrays - 1);
@@ -225,6 +251,18 @@ class Chequer {
                 $key = substr($key, $nextKey + 1);
             }
         }
+        
+        // @ object typecasting
+        if ($key[0] === '@') {
+            $typecast = substr($key, 1);
+            if (($method = strstr($typecast, '(', true))) {
+                // typecast current value
+                return $this->typecast( $method, array($value) );
+            }
+            // just return the typecast's object
+            return $this->typecast( $typecast );
+        }
+        
         if (!is_array($value) && !is_object($value))
                 throw new InvalidArgumentException('Array or object required for key matching.');
 

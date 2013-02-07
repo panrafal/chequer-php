@@ -108,13 +108,17 @@ A `query` can be:
 * `true` - the value should be anything `true` in php
 * `array` - a complex query with any combination of following **key** => **rule**:
     * `$operator` => operator's parameter <br/>
-        one of special operators - ([see below](#operators))
-    * '$' => `bool`  <br/>
-      `true` will set this query to `AND` mode, `false` will set it to `OR`
+        one of special operators - ([see operators](#operators))
+    * '$' => `bool` | `'AND'` | `'OR'`  <br/>
+      `true` and `'AND'` will set this query to `AND` mode, `false` and `'OR'` will set it to `OR`
     * `string` => `query`  <br/>
-      check the value's `subkey` with the `query` - ([see below](#subkeys))
-    * `.subkey1.subkey2` => `query`
-      check the value's two (and more) `subkey`s deep with the `query` - ([see below](#subkeys))
+      check the value's `subkey` with the `query` - ([see subkeys](#subkeys))
+    * `@typecast` => `query`<br/>
+      get the `typecast` value and check it against the `query` - ([see typecasts](#typecasts))
+    * `@typecast()` => `query`<br/>
+      convert current value using the `typecast` and check it against the `query` - ([see typecasts](#typecasts))
+    * `.subkey1.subkey2` => `query`<br/>
+      check the value's two (and more) `subkey`s deep with the `query` - ([see subkeys](#subkeys))
     * `int` => `query`  <br/>
       check the value with the `query`
 
@@ -208,6 +212,64 @@ We are looking for 'foo', 'some' and 'hello' keys, but the 'hello' and 'some' ar
 However, they *will* be discovered, because the array has continuous keys starting from 0. 
 
 Note however, that `['hello' => 'bye']` will not match, because the first element takes the precedence.
+
+### Typecasts
+
+Typecasts are special objects which you can read data from and convert values into. They act like a
+regular subkeys, and can be accessed using dot notation (`.@typecast.subkey`) or plain notation (`@typecast`).
+
+There are two ways to use a typecast:
+- With `@typecast`, you can use the object itself. For example, `@time` will simply return current time
+  as a \Chequer\Time object.
+
+  This works by returning the value for user-provided typecasts. <br/>
+  For built-in one's, the typecast_*() function will be called without any arguments.
+- With `@typecast()`. you can convert current value into another object, hence the word 'typecast'. 
+  For example, `@time()` will try to convert current value into \Chequer\Time object.
+
+  This works by calling the value for user-provided typecasts, so they should be callable, but don't have to.<br/>
+  For built-in one's, the typecast_*() function will be called with the current value as a first argument.
+
+Typecasts can be really powerfull:
+```php
+$chequer = new Chequer();
+// store the reference to the myFile
+$chequer->addTypecasts([
+            'myFile' => 'myfile.txt', 
+            'myFunc' => function($file = null) {return rand(0,100);}
+        ])
+        ->setQuery([
+            // convert SplFileinfo into Chequer\File. Note the brackets.
+            '@file()' => [ 
+                /* File's modification time should be newer then on 'myfile.txt'.
+                   Note the lack of brackets on @myFile - we are using myFile's value
+                   and then we convert it into a Chequer\File - by using the brackets.
+                */
+                '$cmp' => ['mtime', '>', '.@myFile.file().mtime'],
+                /* File should be modified in the current year. 
+                   Note the lack of brackets - we are using the current time's value.
+                   We also use a shorthand syntax for $cmp.
+                */
+                '$cmp' => '.mtime.year = .@time.year',
+                /* We call the myFunc typecast. The result should be grater than 50 */
+                '@myFunc()' => '$> 50'
+                /* As myFunc is a closure, we can skip the brackets. It will be called nevertheless. */
+                '@myFunc' => '$> 50'
+            ]
+        ]);
+
+$files = new CallbackFilterIterator($new FilesystemIterator(dirname(__DIR__)), $chequer);
+foreach($files as $file) {
+    // only files matching the criteria will be listed here!
+    echo $file->getFilepath();
+}
+
+
+```
+
+#### Available typecasts:
+* `@file`
+* `@time`
 
 ### Extending
 
