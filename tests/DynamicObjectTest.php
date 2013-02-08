@@ -48,8 +48,8 @@ class TestObject extends DynamicObject {
     private $_objectGetter = 'objectGetter';
     private $_objectAutoGetter = 'objectAutoGetter';
 
-    protected $__getters = array('objectGetter' => 'objectGetterSetter', 'objectEmptyGetter' => 'objectEmptyGetterSetter', '*' => 'get_');
-    protected $__setters = array('objectGetter' => 'objectGetterSetter', 'objectEmptyGetter' => 'objectEmptyGetterSetter', '*' => 'set_');
+    protected $__getters = array('objectGetter' => 'objectGetterSetter', 'objectEmptyGetter' => 'objectEmptyGetterSetter', DynamicObject::AUTO_PREFIX => 'get_');
+    protected $__setters = array('objectGetter' => 'objectGetterSetter', 'objectEmptyGetter' => 'objectEmptyGetterSetter', DynamicObject::AUTO_PREFIX => 'set_');
     protected $__methods = array();
     
     public function __construct($parent = null) {

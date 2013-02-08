@@ -54,7 +54,7 @@ Will echo:
 * Dynamic property set with `$object->property = 'a';` <small>(PHP handled)</small>
 * Anything handled by `__get()` <small>(subclass handled)</small>
 * Result of getter function set with `addGetter()` (if exists)
-* Result of prefixed getter function set with `addGetter('*', 'prefix')` (if exists)
+* Result of auto getter function set with `addGetter(self::AUTO_PREFIX, 'prefix')` (if exists)
 * Parent object's property if `isset($parent->property)` is true
 * null
 
@@ -70,7 +70,7 @@ Will set:
 * Anything handled by `__set()` <small>(subclass handled)</small>
 * Any `Closure` will be bound to `$this`
 * Call setter function set with `addSetter()` (if exists)
-* Call prefixed setter function set with `addSetter('*', 'prefix')` (if exists)
+* Call auto setter function set with `addSetter(self::AUTO_PREFIX, 'prefix')` (if exists)
 * Parent object's property (if `isset($parent->property)` is true.)
 * New dynamic property
 
@@ -116,7 +116,7 @@ Will check:
 * Declared and dynamic properties <small>(PHP handled)</small>
 * Anything handled by `__isset()` <small>(subclass handled)</small>
 * Existence of getter function set with `addGetter()`
-* Existence of prefixed getter function set with `addGetter('*', 'prefix')` (if exists)
+* Existence of auto getter function set with `addGetter(self::AUTO_PREFIX, 'prefix')` (if exists)
 * Parent object's property with `isset($parent->property)`
 
 There is also a `isCallable()` function, that will look for anything that can be called.
@@ -130,6 +130,6 @@ Will unset:
 * Declared and dynamic properties <small>(PHP handled)</small>
 * Anything handled by `__unset()` <small>(subclass handled)</small>
 * Set null with getter function set with `addGetter()`
-* Set null with prefixed getter function set with `addGetter('*', 'prefix')` (if exists)
+* Set null with auto getter function set with `addGetter(self::AUTO_PREFIX, 'prefix')` (if exists)
 * Parent object's property with `unset($parent->property)`
 

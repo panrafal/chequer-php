@@ -24,6 +24,10 @@ class DynamicObject {
     /** All bounded closures are tracked here as [name => true]. */
     protected $__closures = array();
 
+    const AUTO_PREFIX = '_';
+    const AUTO_UCFIRST = '^';
+    const AUTO_CATCHALL = '*';
+    
     function __construct($parent = null) {
         if ($parent && !is_object($parent)) throw new \InvalidArgumentException("Parrent should be an object!");
         $this->__parent = $parent;
@@ -51,7 +55,7 @@ class DynamicObject {
 
 
     /** 
-     * @param $property Property name or '*' to set getter prefix (eg. 'get_')
+     * @param $property Property name or self::AUTO_PREFIX to set getter prefix (eg. 'get_')
      * @return self */
     public function addGetter($property, $getter) {
         if ($getter instanceof Closure) $getter = $getter->bindTo($this, $this);
@@ -61,7 +65,7 @@ class DynamicObject {
 
 
     /** 
-     * @param $property Property name or '*' to set setter prefix (eg. 'get_')
+     * @param $property Property name or self::AUTO_PREFIX to set setter prefix (eg. 'get_')
      * @return self */
     public function addSetter($property, $setter) {
         if ($setter instanceof Closure) $setter = $setter->bindTo($this, $this);
@@ -128,10 +132,10 @@ class DynamicObject {
         if (isset($this->__getters[$name])) {
             return $this->_callMethodDeclaration($this->__getters[$name]);
         }
-        if (isset($this->__getters['*'])
+        if (isset($this->__getters[self::AUTO_PREFIX])
                 // protect from getting the getter
-                && strncmp($name, $this->__getters['*'], strlen($this->__getters['*'])) !== 0
-                && ($autoName = $this->__getters['*'] . $name)
+                && strncmp($name, $this->__getters[self::AUTO_PREFIX], strlen($this->__getters[self::AUTO_PREFIX])) !== 0
+                && ($autoName = $this->__getters[self::AUTO_PREFIX] . $name)
                 && $this->isCallable($autoName)
                 ) {
             return $this->{$autoName}();
@@ -147,8 +151,8 @@ class DynamicObject {
         if (isset($this->__getters[$name])) {
             return true;
         }
-        if (isset($this->__getters['*'])
-                && ($autoName = $this->__getters['*'] . $name)
+        if (isset($this->__getters[self::AUTO_PREFIX])
+                && ($autoName = $this->__getters[self::AUTO_PREFIX] . $name)
                 && $this->isCallable($autoName)
                 ) {
             return true;
@@ -166,8 +170,8 @@ class DynamicObject {
         if (isset($this->__setters[$name])) {
             return $this->_callMethodDeclaration($this->__setters[$name], array($value));
         }
-        if (isset($this->__setters['*'])
-                && ($autoName = $this->__setters['*'] . $name)
+        if (isset($this->__setters[self::AUTO_PREFIX])
+                && ($autoName = $this->__setters[self::AUTO_PREFIX] . $name)
                 && $this->isCallable($autoName)
                 ) {
             return $this->{$autoName}($value);
@@ -193,8 +197,8 @@ class DynamicObject {
         if (isset($this->__setters[$name])) {
             return $this->_callMethodDeclaration($this->__setters[$name], array(null));
         }
-        if (isset($this->__setters['*'])
-                && ($autoName = $this->__setters['*'] . $name)
+        if (isset($this->__setters[self::AUTO_PREFIX])
+                && ($autoName = $this->__setters[self::AUTO_PREFIX] . $name)
                 && $this->isCallable($autoName)
                 ) {
             return $this->{$autoName}(null);
