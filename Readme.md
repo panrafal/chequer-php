@@ -9,7 +9,7 @@ is _the one_, that makes all the fuss.
 
 In short - use __queries__ to __match values__. 
 
-What Chequer does differently, is that it doesn't use any additional classes to do it's work. It's
+What Chequer does differently, is that it doesn't use any additional classes to do it's core work. It's
 self contained in one file and uses only one simple class.
 It's intentional - Chequer is **fast** and **simple**, and loading additional classes through factories is... well, *not*.
 As an added bonus (and by design), you can use plain text config files to setup your validation, and don't have to worry
@@ -178,6 +178,16 @@ The currently available operators are:
   matches if callable($value) returns TRUE
 * `$size` => `query` <br/>
   checks the size of array or string using the `query`
+* `$rule` => [`rulename1`,`rulename2`] | '`rulename1` `rulename2`' <br/>
+  allows to reuse predefined rules, which you can set with addRules().
+  You can specify many rules as an array, or space delimited string. 
+
+  If you want to match any of the rules, place `OR` as one the rule names:
+  ```php
+  $checker->query(..., '$rule email lowercase');
+  $checker->query(..., '$rule email AND lowercase'); // this is equivalent to the former
+  $checker->query(..., '$rule email OR lowercase');
+  ```
 * `$cmp` => [`value1`, `operator`, `value2`] | '`value1` `operator` `value2`'<br/>
   compares two `values` using the `operator`. Values should be subkeys provided in dot notation.<br/>
   Value of `value2` will be passed to operators as-is. This means it can be used as a query!

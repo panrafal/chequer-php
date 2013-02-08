@@ -34,7 +34,7 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
 
 
     /** @return Chequer */
-    public function buildChequer( $rules, $matchAll = null ) {
+    public function buildChequer( $rules = null, $matchAll = null ) {
         return new Chequer($rules, $matchAll);
     }
 
@@ -214,6 +214,35 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             $this->assertEquals(array('Chequer.php'), array_map('basename', array_keys(iterator_to_array($files))));
         }
     }
+    
+    public function testCheckRules(  ) {
+        $chequer = $this->buildChequer();
+        $chequer->addRules(array(
+            'foo' => '$regex foo',
+            'bar' => '$regex bar',
+            ));
+        $chequer->setQuery('$rule foo');
+        $this->assertTrue($chequer->check('foobar'));
+        $this->assertFalse($chequer->check('hello!'));
+
+        $chequer->setQuery('$rule foo bar');
+        $this->assertTrue($chequer->check('foobar'));
+        $this->assertFalse($chequer->check('foo'));
+
+        $chequer->setQuery('$rule foo AND bar');
+        $this->assertTrue($chequer->check('foobar'));
+        $this->assertFalse($chequer->check('foo'));
+
+        $chequer->setQuery('$rule foo OR bar');
+        $this->assertTrue($chequer->check('foobar'));
+        $this->assertTrue($chequer->check('foo'));
+        $this->assertTrue($chequer->check('bar'));
+        $this->assertFalse($chequer->check('hello!'));
+        
+        $this->setExpectedException('Exception');
+        $chequer->setQuery('$rule missing');
+        $this->assertTrue($chequer->check('foobar'));
+    }    
     
 }
 

@@ -23,9 +23,12 @@ class Chequer {
         '<=' => 'lte',
         '!' => 'not',
         '~' => 'regex',
+        'rules' => 'rule',
     );
     
     protected $typecasts = array();
+    
+    protected $rules = array();
     
     /**
      * @param $query Default query
@@ -99,6 +102,18 @@ class Chequer {
     public function addTypecasts($typecasts) {
         $this->typecasts = array_merge($this->typecasts, $typecasts);
         return $this;
+    }
+
+    
+    /** @return self */
+    public function addRules($rules) {
+        $this->rules = array_merge($this->rules, $rules);
+        return $this;
+    }
+    
+    
+    public function getRules() {
+        return $this->rules;
     }
 
     
@@ -398,5 +413,29 @@ class Chequer {
         }
     }
 
+    
+    protected function operator_rule( $value, $rules ) {
+        if (!is_array($rules)) $rules = preg_split('/ *,? +/', $rules);
+        
+        if (count($rules) > 1) {
+            $query = array('$' => 'AND');
+            foreach($rules as $rule) {
+                if ($rule === 'AND') {
+                    $query['$'] = 'AND';
+                } elseif ($rule === 'OR') {
+                    $query['$'] = 'OR';
+                } else {
+                    if (!isset($this->rules[$rule])) throw new Exception("Rule '$rule' is undefined!");
+                    $query[] = $this->rules[$rule];
+                }
+            }
+            return $this->query($value, $query);
+        } else {
+            if (!isset($this->rules[$rules[0]])) throw new Exception("Rule '{$rules[0]}' is undefined!");
+            return $this->query($value, $this->rules[$rules[0]]);
+        }
+        
+        return $this->query($value, $this->rules[$rules]);
+    }    
 
 }
