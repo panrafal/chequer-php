@@ -8,10 +8,29 @@
  * file that was distributed with this source code. * 
  */
 namespace Chequer {
-    
+    interface Chequerable {
+
+        /**
+         * @param $operator Operator name
+         * @param $value Value to operate on
+         * @param $rule Operator parameter
+         * @param $caller Chequer object calling this. If this function doesn't support this operator, 
+         *                it should call $caller->chequerOperator(..., $caller)
+         */
+        function chequerOperator( $operator, $value, $rule, $caller );
+
+        /**
+         * @param $typecast Typecast name
+         * @param $callArgs Empty array for @typecast, array($value) for @typecast()
+         * @param $caller Chequer object calling this. If this function doesn't support this typecast, 
+         *                it should call $caller->chequerTypecast(..., $caller)
+         */
+        function chequerTypecast( $typecast, $callArgs, $caller );
+
+    }
 }
 namespace {
-    class Chequer {
+    class Chequer implements \Chequer\Chequerable {
 
         protected $query;
         protected $matchAll;
@@ -218,7 +237,7 @@ namespace {
                     if ($key === '$') {
                         $matchAll = ($rule === 'OR' || $rule === 'or') ? false : $rule == true;
                     } else {
-                        $result = $this->operator(substr($key, 1), $value, $rule);
+                        $result = $this->chequerOperator(substr($key, 1), $value, $rule);
                     }
                 } else { // look in the array/hashmap
                     $result = $this->querySubkey($value, $key, $rule, $this->deepArrays);
@@ -234,7 +253,7 @@ namespace {
         }
 
 
-        protected function operator($operator, $value, $rule) {
+        protected function chequerOperator($operator, $value, $rule, $caller = null) {
             if (isset($this->operators[$operator])) {
                 if (is_string($this->operators[$operator])) {
                     $operator = $this->operators[$operator];
@@ -242,12 +261,16 @@ namespace {
                     return call_user_func($this->operators[$operator], $value, $rule);
                 }
             }
+            // if it's not aliased or user-defined, we try to ask the value itself
+            if ($value instanceof \Chequer\Chequerable && $caller === null) {
+                return $value->chequerOperator($operator, $value, $rule, $this);
+            }
             return call_user_func(array($this, 'operator_' . $operator), $value, $rule);
         }
 
 
         /** Calls or returns a typecast object */
-        protected function typecast($typecast, $callArgs = array()) {
+        protected function chequerTypecast($typecast, $callArgs = array(), $caller = null) {
             if (isset($this->typecasts[$typecast])) {
                 $typecastObj = $this->typecasts[$typecast];
                 if (count($callArgs) == 0 && ($typecastObj instanceof Closure) == false) {
@@ -257,6 +280,10 @@ namespace {
                 } else {
                     throw new Exception("Typecast '$typecast' cannot be called!");
                 }
+            }
+            // if it's not user-defined, we try to ask the value itself
+            if ($callArgs && $callArgs[0] instanceof \Chequer\Chequerable && $caller === null) {
+                return $callArgs[0]->chequerTypecast($typecast, $callArgs, $this);
             }
             return call_user_func(array($this, 'typecast_' . $typecast), $callArgs);
         }
@@ -279,10 +306,10 @@ namespace {
                 $typecast = substr($key, 1);
                 if (($method = strstr($typecast, '(', true))) {
                     // typecast current value
-                    return $this->typecast( $method, array($value) );
+                    return $this->chequerTypecast( $method, array($value) );
                 }
                 // just return the typecast's object
-                return $this->typecast( $typecast );
+                return $this->chequerTypecast( $typecast );
             }
 
             if (!is_array($value) && !is_object($value))
@@ -415,7 +442,7 @@ namespace {
             } elseif (is_numeric($operator) || strpos($this->specialChars, $operator[0]) !== false) {
                 return $this->query($value1, array($operator => $value2));
             } else {
-                return $this->operator($operator, $value1, $value2);
+                return $this->chequerOperator($operator, $value1, $value2);
             }
         }
 

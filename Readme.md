@@ -150,9 +150,9 @@ Consider these examples
 ### Operators
 
 The currently available operators are:
-* `$` => true | 1 | "AND" <br/>
+* `$` => `true` | `1` | `'AND'` <br/>
   Enables AND mode, requiring every rule to match
-* `$` => false | 0 | "OR" <br/>
+* `$` => `false` | `0` | `'OR'` <br/>
   Enables OR mode, only single rule has to match
 * `$and` => [`query`, `query`, ...]  <br/>
   matches all queries
