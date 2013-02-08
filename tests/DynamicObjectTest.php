@@ -261,6 +261,7 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $this->assertNull($this->obj->objectGetter);
     }
 
+    /** @todo wider test for cloning */
     protected function clonedPropertyTest($new) {
         $obj = $this->obj;
         $cloned = clone $this->obj;
@@ -282,7 +283,7 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         // cloned?
         $this->assertEquals('clonedProperty', $cloned->test);
         // new?
-        $this->assertEquals('newProperty', $cloned->test);
+        $this->assertEquals('newProperty', $new->test);
     }
     
     // done
@@ -391,12 +392,12 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
     
     // done
     public function testCallClosure() {
-        $this->test = $this->closure;
+        $this->obj->test = $this->closure;
 
         $this->assertTrue($this->obj->isCallable('test'));
         
         $this->assertInstanceOf('Closure', $this->obj->test);
-        $this->assertNotEquals($this->closure, $this->obj->test, 'Bound closure should be different!');
+        $this->assertFalse($this->closure === $this->obj->test, 'Bound closure should be different!');
         
         $this->assertEquals($this->obj, $this->obj->test());
         
@@ -445,6 +446,8 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $this->referencesTest('closureAutoProperty');
         
     }
+ 
+    
     
 }
 

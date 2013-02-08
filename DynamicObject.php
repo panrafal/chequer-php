@@ -93,9 +93,9 @@ class DynamicObject {
         if (isset($this->__methods[$name])) {
             return true;
         }
-//        if (($property = $this->{$name}) instanceof Closure || is_callable($property)) {
-//            return true;
-//        }
+        if (($property = $this->{$name}) instanceof Closure || is_callable($property)) {
+            return true;
+        }
         return ($this->__parent && method_exists($this->__parent, $name));
     }
 
@@ -127,6 +127,8 @@ class DynamicObject {
             return $this->_callMethodDeclaration($this->__getters[$name]);
         }
         if (isset($this->__getters['*'])
+                // protect from getting the getter
+                && strncmp($name, $this->__getters['*'], strlen($this->__getters['*'])) !== 0
                 && ($autoName = $this->__getters['*'] . $name)
                 && $this->isCallable($autoName)
                 ) {
@@ -199,6 +201,20 @@ class DynamicObject {
 
         unset($this->{$name});
 
+    }
+
+    
+    public function __clone() {
+        // we need to rebind closures...
+        foreach($this->__getters as &$func) {
+            if ($func instanceof Closure) $func = $func->bindTo($this, $this);
+        }
+        foreach($this->__setters as &$func) {
+            if ($func instanceof Closure) $func = $func->bindTo($this, $this);
+        }
+        foreach($this->__methods as &$func) {
+            if ($func instanceof Closure) $func = $func->bindTo($this, $this);
+        }
     }
 
 

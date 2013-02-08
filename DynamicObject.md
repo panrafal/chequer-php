@@ -40,11 +40,15 @@ Will set:
 * New dynamic property
 
 Note, that `Closures` are always bound to `$this` (the DynamicObject) - even when set on the parent object.
+This way they can behave as first-class methods of the DynamicObject and still have access to the parent object.
 
 Note also, that if the closure is set as a dynamic property it will NOT work as a getter/setter. 
 `$object->someClosure = 'a';` will replace the closure by `'a'`. Any subsequent closure set this way
 will also NOT be bound to `$this`. So the best way to set closures is to use `unset($object->closure); $object->closure = ...`
 or `$object->addMethod()`.
+
+If you clone the object, all closures will be bounded to the new `$this`. As this is not a trivial matter,
+the current implementation may be buggy.
 
 ### Calling methods
 ```php
