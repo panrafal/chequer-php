@@ -21,6 +21,8 @@ class DynamicObject {
     protected $__getters = array();
     protected $__setters = array();
     protected $__methods = array();
+    /** All bounded closures are tracked here as [name => true]. */
+    protected $__closures = array();
 
     function __construct($parent = null) {
         if ($parent && !is_object($parent)) throw new \InvalidArgumentException("Parrent should be an object!");
@@ -156,7 +158,10 @@ class DynamicObject {
 
 
     public function __set($name, $value) {
-        if ($value instanceof Closure) $value = $value->bindTo($this, $this);
+        if ($value instanceof Closure) {
+            $this->__closures[$name] = true;
+            $value = $value->bindTo($this, $this);
+        }
 
         if (isset($this->__setters[$name])) {
             return $this->_callMethodDeclaration($this->__setters[$name], array($value));
@@ -214,6 +219,19 @@ class DynamicObject {
         }
         foreach($this->__methods as &$func) {
             if ($func instanceof Closure) $func = $func->bindTo($this, $this);
+        }
+        
+        // reset the list of closures...
+        $closures = $this->__closures;
+        $this->__closures = array();
+        
+        // and try to rebind them
+        foreach($closures as $name => $enabled) {
+            if (!$enabled) continue;
+            if (($closure = $this->{$name}) instanceof Closure) {
+                // rebind and assign again
+                $this->{$name} = $closure->bindTo($this, $this);
+            }
         }
     }
 
