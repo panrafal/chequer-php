@@ -78,6 +78,7 @@ class DynamicObject {
 
     /** @return self */
     public function addProperty($property, $method) {
+        if ($method instanceof Closure) $method = $method->bindTo($this, $this);
         $this->__getters[$property] =
                 $this->__setters[$property] =
                 $this->__methods[$property] = $method;
@@ -121,7 +122,7 @@ class DynamicObject {
     }
 
 
-    public function &__get($name) {
+    public function __get($name) {
         if (isset($this->__getters[$name])) {
             return $this->_callMethodDeclaration($this->__getters[$name]);
         }
@@ -134,8 +135,7 @@ class DynamicObject {
         if ($this->__parent && isset($this->__parent->{$name})) {
             return $this->__parent->{$name};
         }
-        $null = null;
-        return $null;
+        return null;
     }
 
 

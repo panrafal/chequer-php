@@ -56,8 +56,8 @@ class TestObject extends DynamicObject {
         parent::__construct($parent);
     }
 
-    public function declaredMethod($value = null) {
-        return $value === null ? 'declaredMethod' : $value;
+    public function declaredMethod($value = false) {
+        return $value === false ? 'declaredMethod' : $value;
     }
     
     public function callMethodDeclaration($method, $arguments) {
@@ -68,8 +68,8 @@ class TestObject extends DynamicObject {
         return $this->declaredPrivateProperty;
     }
     
-    protected function objectGetterSetter($value = null) {
-        if ($value !== null) {
+    protected function objectGetterSetter($value = false) {
+        if ($value !== false) {
             $this->_objectGetter = $value;
         } else {
             return $this->_objectGetter;
@@ -93,7 +93,7 @@ class TestObject extends DynamicObject {
         return parent::__call($name, $arguments);
     }
 
-    public function &__get($name) {
+    public function __get($name) {
         if ($name == 'objectGet') return $this->_objectGet;
         return parent::__get($name);
     }
@@ -136,20 +136,20 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $this->parent = new TestParentObject();
         $this->obj = new TestObject($this->parent);
         
-        $this->closureProperty = function($value = null) {
-            if ($value !== null) {
+        $this->closureProperty = function($value = false) {
+            if ($value !== false) {
                 $this->closureProperty = $value;
             } else {
                 return $this->closureProperty;
             }
         };
-        $this->closure = function($value = null) {
-            return $value === null ? $this : $value;
+        $this->closure = function($value = false) {
+            return $value === false ? $this : $value;
         };
     }
     
-    public static function staticGetterSetter($self, $value = null) {
-        if ($value !== null) {
+    public static function staticGetterSetter($self, $value = false) {
+        if ($value !== false) {
             $self->staticProperty = $value;
         } else {
             return $self->staticProperty;
@@ -230,7 +230,7 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $this->obj->objectGet = 'foo';
         $this->assertEquals('foo', $this->obj->objectGet);
         
-        $this->obj->objectGet = 'bar';
+        $this->obj->parentGet = 'bar';
         $this->assertEquals('bar', $this->obj->parentGet);
         
         // unset
@@ -238,7 +238,7 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $this->assertTrue(isset($this->obj->objectGet));
         $this->assertNull($this->obj->objectGet);
         unset($this->obj->parentGet);
-        $this->assertTrue(isset($this->obj->parentGet));
+        $this->assertFalse(isset($this->obj->parentGet));
     }
     
     // done
@@ -249,7 +249,7 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         
         // get
         $this->assertEquals('objectGetter', $this->obj->objectGetter);
-        $this->assertNull('objectEmptyGetter', $this->obj->objectGetter);
+        $this->assertNull($this->obj->objectEmptyGetter);
         
         // set
         $this->obj->objectGetter = 'foo';
@@ -262,19 +262,21 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
     }
 
     protected function clonedPropertyTest($new) {
-        $cloned = $this->obj;
-        
+        $obj = $this->obj;
+        $cloned = clone $this->obj;
+        $cloned->id += 1;
+        $new->id += 2;
         // isset
-        $this->assertTrue(isset($this->obj->test));
+        $this->assertTrue(isset($obj->test));
         // set
-        $this->obj->test = 'property';
+        $obj->test = 'property';
         $cloned->test = 'clonedProperty';
         $new->test = 'newProperty';
         // get
-        $this->assertEquals('property', $this->obj->test);
+        $this->assertEquals('property', $obj->test);
         // unset
-        unset($this->obj->test);
-        $this->assertTrue(isset($this->obj->test));
+        unset($obj->test);
+        $this->assertTrue(isset($obj->test));
         $this->assertNull($this->obj->test);
         
         // cloned?
@@ -416,12 +418,13 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $val .= 'should not change';
         $this->assertEquals($original, $this->obj->{$property}, "$property should not change");
         
-        $this->obj->{$property} = array('foo' => 'foo');
-        $this->obj->{$property}['foo'] = 'bar';
-        $this->assertEquals(array('foo' => 'bar'), $this->obj->{$property}, "$property should change");
+//        $this->obj->{$property} = array('foo' => 'foo');
+//        $this->obj->{$property}['foo'] = 'bar';
+//        $this->assertEquals(array('foo' => 'bar'), $this->obj->{$property}, "$property should change");
         
     }
     
+    // this test had more sense with references, but it's probably not possible to do them sensibly
     public function testGetReference() {
         $this->referencesTest('objectGet');        
         $this->referencesTest('objectGetter');        
@@ -434,8 +437,8 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $this->obj->addProperty('closureProperty', $this->closureProperty);
         $this->referencesTest('closureProperty');
         
-        $this->obj->addGetter('callableGetterSetter', ['DynamicTestObject', 'staticGetterSetter']);
-        $this->obj->addSetter('callableGetterSetter', ['DynamicTestObject', 'staticGetterSetter']);
+        $this->obj->addGetter('callableGetterSetter', ['DynamicObjectTest', 'staticGetterSetter']);
+        $this->obj->addSetter('callableGetterSetter', ['DynamicObjectTest', 'staticGetterSetter']);
         $this->referencesTest('callableGetterSetter');
 
         $this->obj->get_closureAutoProperty = $this->obj->set_closureAutoProperty = $this->closureProperty;

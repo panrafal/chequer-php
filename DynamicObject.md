@@ -23,7 +23,8 @@ Will echo:
 * Parent object's property if `isset($parent->property)` is true
 * null
 
-Properties are returned by reference, so `$object->property['foo'] = 'bar';` will work!
+Properties are not returned by reference, so `$object->property['foo'] = 'bar';` will not work for anything
+other, than dynamic properties!
 
 ### Setting properties
 ```php
