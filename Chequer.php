@@ -29,6 +29,8 @@ namespace {
             '~' => 'regex',
             'rules' => 'rule',
         );
+        
+        protected $specialChars = '$.@';
 
         protected $typecasts = array();
 
@@ -410,7 +412,7 @@ namespace {
 
             if (!$operator) {
                 return $this->query($value1, $value2);
-            } elseif (is_numeric($operator) || $operator[0] == '$' || $operator[0] == '.' || $operator[0] == '@') {
+            } elseif (is_numeric($operator) || strpos($this->specialChars, $operator[0]) !== false) {
                 return $this->query($value1, array($operator => $value2));
             } else {
                 return $this->operator($operator, $value1, $value2);
