@@ -2,17 +2,17 @@
 
 /*
  * CHEQUER for PHP
- * 
+ *
  * Copyright (c)2013 Rafal Lindemann <rl@stamina.pl>
- * 
+ *
  * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code. * 
+ * file that was distributed with this source code. *
  */
 
-/** Dynamic objects in PHP 
- * 
- * echo 
- * 
+/** Dynamic objects in PHP
+ *
+ * echo
+ *
  */
 class DynamicObject {
 
@@ -48,14 +48,18 @@ class DynamicObject {
     }
 
 
-    /** @return self */
+    /** 
+     * @param $property Property name or '*' to set getter prefix (eg. 'get_')
+     * @return self */
     public function addGetter($property, $getter) {
         $this->__getters[$property] = $getter;
         return $this;
     }
 
 
-    /** @return self */
+    /** 
+     * @param $property Property name or '*' to set setter prefix (eg. 'get_')
+     * @return self */
     public function addSetter($property, $setter) {
         $this->__setters[$property] = $setter;
         return $this;
@@ -86,7 +90,7 @@ class DynamicObject {
             return true;
     }
 
-    protected function _callMethodDeclaration($method, $arguments) {
+    protected function _callMethodDeclaration($method, $arguments = array()) {
         if ($method instanceof Closure) return call_user_func_array($method, $arguments);
         if (is_string($method)) return call_user_func_array(array($this, $method), $arguments);
         array_unshift($arguments, $this);
@@ -94,32 +98,97 @@ class DynamicObject {
     }
 
     public function __call($name, $arguments) {
-        
+        if (isset($this->__methods[$name])) {
+            return $this->_callMethodDeclaration($this->__methods[$name], $arguments);
+        }
+        if (($property = $this->{$name}) instanceof Closure || is_callable($property)) {
+            return call_user_func_array($property, $arguments);
+        }
+        if ($this->__parent && method_exists($this->__parent, $name)) {
+            return call_user_func_array(array($this->__parent, $name), $arguments);
+        }
+        throw new BadMethodCallException("Method '$name' is undefined!");
     }
 
 
     public function &__get($name) {
-        
+        if (isset($this->__getters[$name])) {
+            return $this->_callMethodDeclaration($this->__getters[$name]);
+        }
+        if (isset($this->__getters['*'])
+                && ($autoName = $this->__getters['*'] . $name)
+                && $this->isCallable($autoName)
+                ) {
+            return $this->{$autoName}();
+        }
+        if ($this->__parent && isset($this->__parent->{$name})) {
+            return $this->__parent->{$name};
+        }
+        $null = null;
+        return $null;
     }
 
 
     public function __isset($name) {
-        
+        if (isset($this->__getters[$name])) {
+            return true;
+        }
+        if (isset($this->__getters['*'])
+                && ($autoName = $this->__getters['*'] . $name)
+                && $this->isCallable($autoName)
+                ) {
+            return true;
+        }
+        return ($this->__parent && isset($this->__parent->{$name}));
     }
 
 
     public function __set($name, $value) {
-        
+        if ($value instanceof Closure) $value->bindTo($this, $this);
+
+        if (isset($this->__setters[$name])) {
+            return $this->_callMethodDeclaration($this->__setters[$name], array($value));
+        }
+        if (isset($this->__setters['*'])
+                && ($autoName = $this->__setters['*'] . $name)
+                && $this->isCallable($autoName)
+                ) {
+            return $this->{$autoName}($value);
+        }
+        if ($this->__parent && isset($this->__parent->{$name})) {
+            $this->__parent->{$name} = $value;
+            return;
+        }
+        $this->{$name} = $value;
     }
 
 
     public function __toString() {
-        
+        try {
+            return $this->__call('__toString', array());
+        } catch (Exception $e) {
+            return '(' . $e->getMessage() . ')';
+        }
     }
 
 
     public function __unset($name) {
-        
+        if (isset($this->__setters[$name])) {
+            return $this->_callMethodDeclaration($this->__setters[$name], array(null));
+        }
+        if (isset($this->__setters['*'])
+                && ($autoName = $this->__setters['*'] . $name)
+                && $this->isCallable($autoName)
+                ) {
+            return $this->{$autoName}(null);
+        }
+        if ($this->__parent && isset($this->__parent->{$name})) {
+            unset($this->__parent->{$name});
+            return;
+        }
+
+        unset($this->{$name});
+
     }
 
 

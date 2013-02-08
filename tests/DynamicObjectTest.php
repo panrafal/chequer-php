@@ -34,6 +34,9 @@ class TestParentObject {
         unset($this->props[$name]);
     }
 
+    public function __toString() {
+        return 'parentToString';
+    }
 
 }
 
@@ -339,8 +342,14 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
     
     // done
     public function testStrings() {
+        $this->assertEquals('parentToString', (string)$this->obj);
+        
         $this->obj->__toString = function() { return 'Hello world! ' . $this->declaredPublicProperty; };
         $this->assertEquals('Hello world! declaredPublicProperty', (string)$this->obj);
+        
+        $new = new TestObject();
+        ///TODO: got to decide what to return :)
+        $this->assertEquals('Eeee', (string)$new);
     }
 
     // done
@@ -391,7 +400,7 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
     }
     
     public function testCallMissing() {
-        $this->setExpectedException('Exception');
+        $this->setExpectedException('BadMethodCallException');
         
         $this->obj->missingMethod();
     }

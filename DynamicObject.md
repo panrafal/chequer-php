@@ -57,6 +57,7 @@ Will call:
 * Parent object's method if `method_exists($parent, $method)` is true
 * throw an exception
 
+Anything from above list will return `true` with `isCallable()`
 
 ### Casting strings
 ```php
