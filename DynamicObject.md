@@ -4,7 +4,42 @@ Dynamic Object
 Dynamic objects try to give the PHP some flexibility, that users of more dynamic languages enjoy.
 
 Remember, that it can bring many sorts of headaches, but on the other side, may be very usable in
-some situations. For example, you can dynamically create classes or extend existing objects!
+some situations. 
+
+For example, you can dynamically create classes!
+```php
+        // create a class with a getter, one method and one property
+        $myClass = new DynamicObject();
+        $myClass->timeOffset = 'now';
+        $myClass->addGetter('whatTime', function() {
+                return $this->format(strtotime($this->timeOffset));
+            })
+            ->addMethod('format', function($value) {
+                return strftime('%Y-%m-%d', $value);
+            })
+            ;
+        
+        // instantiate two class objects
+        $today = clone $myClass;
+        $yesterday = clone $myClass;
+        $yesterday->timeOffset = "-1 day";
+
+        echo "Today is {$today->whatTime}, yesterday was {$yesterday->whatTime}";
+
+```
+
+Or extend existing objects!
+```php
+        $file = new SplFileInfo(__FILE__);
+        $file->getSize();
+        
+        $superFile = new DynamicObject($file);
+        $superFile->getSize = function() {
+            return $this->getParentObject()->getSize() * 1000;
+        };
+        
+        echo 'Whoa! ' . $superFile->getFilename() . ' is somewhat bigger! It has ' . $superFile->getSize();
+```
 
 It's a part of **Chequer** project for now, but it probably should have it's own repository.
 

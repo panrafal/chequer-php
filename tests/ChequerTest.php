@@ -211,7 +211,7 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
         if (class_exists('CallbackFilterIterator')) {
             $files = new FilesystemIterator(dirname(__DIR__));
             $files = new CallbackFilterIterator($files, new Chequer(array('getExtension()' => 'php')));
-            $this->assertEquals(array('Chequer.php'), array_map('basename', array_keys(iterator_to_array($files))));
+            $this->assertContains('Chequer.php', array_map('basename', array_keys(iterator_to_array($files))));
         }
     }
     

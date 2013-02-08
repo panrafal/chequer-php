@@ -448,6 +448,44 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
     }
  
     
+    public function testUsecase_createClass() {
+        
+        // create a class with a getter, one method and one property
+        $myClass = new DynamicObject();
+        $myClass->timeOffset = 'now';
+        $myClass->addGetter('whatTime', function() {
+                return $this->format(strtotime($this->timeOffset));
+            })
+            ->addMethod('format', function($value) {
+                return strftime('%Y-%m-%d', $value);
+            })
+            ;
+        
+        // instantiate two class objects
+        $today = clone $myClass;
+        $yesterday = clone $myClass;
+        $yesterday->timeOffset = "-1 day";
+            
+        $this->assertEquals(strftime('%Y-%m-%d'), $today->whatTime);
+        $this->assertEquals(strftime('%Y-%m-%d', strtotime('-1 day')), $yesterday->whatTime);
+        
+    }    
     
+    public function testUsecase_extendClass() {
+        
+        $file = new SplFileInfo(__FILE__);
+        $file->getSize();
+        
+        $superFile = new DynamicObject($file);
+        $superFile->getSize = function() {
+            return $this->getParentObject()->getSize() * 1000;
+        };
+        
+//        echo 'Whoa! ' . $superFile->getFilename() . ' is somewhat bigger! It has ' . $superFile->getSize();
+        
+        $this->assertEquals(__FILE__, $superFile->getRealPath());
+        $this->assertEquals($file->getSize() * 1000, $superFile->getSize());
+        
+    }    
 }
 
