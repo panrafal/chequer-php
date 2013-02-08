@@ -52,6 +52,7 @@ class DynamicObject {
      * @param $property Property name or '*' to set getter prefix (eg. 'get_')
      * @return self */
     public function addGetter($property, $getter) {
+        if ($getter instanceof Closure) $getter = $getter->bindTo($this, $this);
         $this->__getters[$property] = $getter;
         return $this;
     }
@@ -61,6 +62,7 @@ class DynamicObject {
      * @param $property Property name or '*' to set setter prefix (eg. 'get_')
      * @return self */
     public function addSetter($property, $setter) {
+        if ($setter instanceof Closure) $setter = $setter->bindTo($this, $this);
         $this->__setters[$property] = $setter;
         return $this;
     }
@@ -68,6 +70,7 @@ class DynamicObject {
 
     /** @return self */
     public function addMethod($property, $method) {
+        if ($method instanceof Closure) $method = $method->bindTo($this, $this);
         $this->__methods[$property] = $method;
         return $this;
     }
@@ -86,10 +89,16 @@ class DynamicObject {
     public function isCallable($name) {
         if (method_exists($this, $name))
             return true;
-        if ($this->__parent && method_exists($this->__parent, $name))
+        if (isset($this->__methods[$name])) {
             return true;
+        }
+//        if (($property = $this->{$name}) instanceof Closure || is_callable($property)) {
+//            return true;
+//        }
+        return ($this->__parent && method_exists($this->__parent, $name));
     }
 
+    
     protected function _callMethodDeclaration($method, $arguments = array()) {
         if ($method instanceof Closure) return call_user_func_array($method, $arguments);
         if (is_string($method)) return call_user_func_array(array($this, $method), $arguments);
@@ -97,6 +106,7 @@ class DynamicObject {
         return call_user_func_array($method, $arguments);
     }
 
+    
     public function __call($name, $arguments) {
         if (isset($this->__methods[$name])) {
             return $this->_callMethodDeclaration($this->__methods[$name], $arguments);
@@ -104,7 +114,7 @@ class DynamicObject {
         if (($property = $this->{$name}) instanceof Closure || is_callable($property)) {
             return call_user_func_array($property, $arguments);
         }
-        if ($this->__parent && method_exists($this->__parent, $name)) {
+        if ($this->__parent) {
             return call_user_func_array(array($this->__parent, $name), $arguments);
         }
         throw new BadMethodCallException("Method '$name' is undefined!");
@@ -144,7 +154,7 @@ class DynamicObject {
 
 
     public function __set($name, $value) {
-        if ($value instanceof Closure) $value->bindTo($this, $this);
+        if ($value instanceof Closure) $value = $value->bindTo($this, $this);
 
         if (isset($this->__setters[$name])) {
             return $this->_callMethodDeclaration($this->__setters[$name], array($value));

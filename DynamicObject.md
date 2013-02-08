@@ -54,7 +54,7 @@ Will call:
 * Anything handled by `__call()` <small>(subclass handled)</small>
 * Function set with `addMethod()`
 * Any `Closure` or `callable` that is the result of `$object->property`
-* Parent object's method if `method_exists($parent, $method)` is true
+* Parent object's method
 * throw an exception
 
 Anything from above list will return `true` with `isCallable()`

@@ -15,7 +15,7 @@ class TestParentObject {
     
     public function __call($name, $arguments) {
         if ($name == 'parentCall') return 'parentCall';
-        throw new Exception("Unknown function");
+        throw new Exception("Unknown function '$name'");
     }
 
     public function __get($name) {
@@ -108,7 +108,7 @@ class TestObject extends DynamicObject {
             $this->_objectGet = $value;
             return;
         }
-        return parent::__isset($name);
+        return parent::__set($name, $value);
     }
 
     public function __unset($name) {
@@ -116,7 +116,7 @@ class TestObject extends DynamicObject {
             unset($this->_objectGet);
             return;
         }
-        return parent::__isset($name);
+        return parent::__unset($name);
     }    
 }
 
@@ -209,7 +209,7 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals('objectDynamicProperty', $this->obj->objectDynamicProperty);
         $this->assertTrue(isset($this->obj->objectDynamicProperty));
         
-        $this->assertEquals(array('objectDynamicProperty' => 'objectDynamicProperty'), get_object_vars($this->obj));
+        $this->assertEquals(array('id' => 1, 'objectDynamicProperty' => 'objectDynamicProperty', 'declaredPublicProperty' => 'declaredPublicProperty'), get_object_vars($this->obj));
         
         // unset
         unset($this->obj->objectDynamicProperty);
@@ -286,7 +286,7 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
     // done
     public function testPropertyClosure() {
         $this->obj->addProperty('test', $this->closureProperty);
-        $this->assertFalse($this->obj->isCallable('test'), 'Should be callable as ->test()!');
+        $this->assertTrue($this->obj->isCallable('test'), 'Should be callable as ->test()!');
 
         $new = new TestObject();
         $new->addProperty('test', $this->closureProperty);
@@ -296,12 +296,12 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
 
     // done
     public function testGetterSetterCallable() {
-        $this->obj->addGetter('test', ['DynamicTestObject', 'staticGetterSetter']);
-        $this->obj->addSetter('test', ['DynamicTestObject', 'staticGetterSetter']);
+        $this->obj->addGetter('test', ['DynamicObjectTest', 'staticGetterSetter']);
+        $this->obj->addSetter('test', ['DynamicObjectTest', 'staticGetterSetter']);
         $this->assertFalse($this->obj->isCallable('test'), 'Should NOT be callable as ->test()!');
         
         $new = new TestObject();
-        $new->addProperty('test', ['DynamicTestObject', 'staticGetterSetter']);
+        $new->addProperty('test', ['DynamicObjectTest', 'staticGetterSetter']);
         
         $this->clonedPropertyTest($new);
     }    
@@ -344,12 +344,14 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
     public function testStrings() {
         $this->assertEquals('parentToString', (string)$this->obj);
         
-        $this->obj->__toString = function() { return 'Hello world! ' . $this->declaredPublicProperty; };
+        $this->obj->__toString = function() { 
+            return 'Hello world! ' . $this->declaredPublicProperty; 
+        };
         $this->assertEquals('Hello world! declaredPublicProperty', (string)$this->obj);
         
         $new = new TestObject();
         ///TODO: got to decide what to return :)
-        $this->assertEquals('Eeee', (string)$new);
+        $this->assertEquals("(Method '__toString' is undefined!)", (string)$new);
     }
 
     // done
@@ -378,8 +380,8 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $this->assertTrue($this->obj->isCallable('testMethod'));
         $this->assertTrue($this->obj->isCallable('testClosure'));
         
-        $this->assertEquals('testMethod', $this->obj->testMethod());
-        $this->assertEquals($this->obj, $this->obj->testClosure());
+        $this->assertEquals('declaredMethod', $this->obj->testMethod());
+        $this->assertTrue($this->obj === $this->obj->testClosure());
         
         $this->assertEquals('test', $this->obj->testMethod('test'));
         $this->assertEquals('test', $this->obj->testClosure('test'));
@@ -401,20 +403,43 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
     
     public function testCallMissing() {
         $this->setExpectedException('BadMethodCallException');
-        
-        $this->obj->missingMethod();
+
+        $obj = new TestObject();
+        $obj->missingMethod();
     }
     
     // done
-    public function testGetReference() {
-        $val = $this->obj->objectGetter;
+    protected function referencesTest($property) {
+        $this->obj->{$property} = 'some value';
+        $val = $this->obj->{$property};
+        $original = $val;
         $val .= 'should not change';
-        $this->assertEquals('objectGetter', $this->obj->objectGetter);
+        $this->assertEquals($original, $this->obj->{$property}, "$property should not change");
         
-        $this->obj->objectGetter = array('foo' => 'foo');
-        $this->obj->objectGetter['foo'] = 'bar';
-        $this->assertEquals(array('foo' => 'bar'), $this->obj->objectGetter);
+        $this->obj->{$property} = array('foo' => 'foo');
+        $this->obj->{$property}['foo'] = 'bar';
+        $this->assertEquals(array('foo' => 'bar'), $this->obj->{$property}, "$property should change");
         
+    }
+    
+    public function testGetReference() {
+        $this->referencesTest('objectGet');        
+        $this->referencesTest('objectGetter');        
+        $this->referencesTest('objectAutoGet');        
+        $this->referencesTest('objectAutoGet');   
+        
+        $this->referencesTest('parentDeclaredProperty');        
+        $this->referencesTest('parentGet');        
+        
+        $this->obj->addProperty('closureProperty', $this->closureProperty);
+        $this->referencesTest('closureProperty');
+        
+        $this->obj->addGetter('callableGetterSetter', ['DynamicTestObject', 'staticGetterSetter']);
+        $this->obj->addSetter('callableGetterSetter', ['DynamicTestObject', 'staticGetterSetter']);
+        $this->referencesTest('callableGetterSetter');
+
+        $this->obj->get_closureAutoProperty = $this->obj->set_closureAutoProperty = $this->closureProperty;
+        $this->referencesTest('closureAutoProperty');
         
     }
     
