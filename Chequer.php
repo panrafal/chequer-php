@@ -253,7 +253,7 @@ namespace {
         }
 
 
-        protected function chequerOperator($operator, $value, $rule, $caller = null) {
+        public function chequerOperator($operator, $value, $rule, $caller = null) {
             if (isset($this->operators[$operator])) {
                 if (is_string($this->operators[$operator])) {
                     $operator = $this->operators[$operator];
@@ -270,7 +270,7 @@ namespace {
 
 
         /** Calls or returns a typecast object */
-        protected function chequerTypecast($typecast, $callArgs = array(), $caller = null) {
+        public function chequerTypecast($typecast, $callArgs = array(), $caller = null) {
             if (isset($this->typecasts[$typecast])) {
                 $typecastObj = $this->typecasts[$typecast];
                 if (count($callArgs) == 0 && ($typecastObj instanceof Closure) == false) {
