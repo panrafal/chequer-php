@@ -24,9 +24,7 @@ class DynamicObject {
     /** All bounded closures are tracked here as [name => true]. */
     protected $__closures = array();
 
-    const AUTO_PREFIX = '_';
-    const AUTO_UCFIRST = '^';
-    const AUTO_CATCHALL = '*';
+    const AUTO_PREFIX = '*';
     
     function __construct($parent = null) {
         if ($parent && !is_object($parent)) throw new \InvalidArgumentException("Parrent should be an object!");

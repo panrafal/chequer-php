@@ -1,12 +1,12 @@
-Dynamic Object
---------------
+DynamicObject 0.1
+-----------------
 
-Dynamic objects try to give the PHP some flexibility, that users of more dynamic languages enjoy.
+DynamicObject tries to give the PHP some flexibility, that users of more dynamic languages enjoy everyday.
 
-Remember, that it can bring many sorts of headaches, but on the other side, may be very usable in
-some situations. 
+When abused, it may bring many sorts of headaches, but on the other side, open a whole
+new world of possibilities. 
 
-For example, you can dynamically create classes!
+For example, you can __dynamically create classes__!
 ```php
         // create a class with a getter, one method and one property
         $myClass = new DynamicObject();
@@ -28,12 +28,13 @@ For example, you can dynamically create classes!
 
 ```
 
-Or extend existing objects!
+Or __extend existing objects__!
 ```php
         $file = new SplFileInfo(__FILE__);
         $file->getSize();
         
         $superFile = new DynamicObject($file);
+        // overriding methods is THAT easy!
         $superFile->getSize = function() {
             return $this->getParentObject()->getSize() * 1000;
         };
@@ -41,9 +42,17 @@ Or extend existing objects!
         echo 'Whoa! ' . $superFile->getFilename() . ' is somewhat bigger! It has ' . $superFile->getSize();
 ```
 
+This is something very fresh, but well unit tested (97% coverage!). 
+
 It's a part of **Chequer** project for now, but it probably should have it's own repository.
 
+------------------------------------------------------
+
 ## Logic
+
+You use `DynamicObjects` in the same way as every other object. You just have a lot more possibilities available.
+Below are typical object operations, with ordered lists of what will happen inside the object.
+You can check `\Chequer\Time` and `\Chequer\File` as real-life examples.
 
 ### Getting properties
 ```php
@@ -104,8 +113,8 @@ Anything from above list will return `true` with `isCallable()`
 echo (string)$object;
 ```
 Will call:
-* Existing __toString() <small>(PHP handled)</small>
-* Closure with the name `__toString` (which will throw an exception if missing)
+* Existing __toString() <small>(subclass handled)</small>
+* Closure with the name `__toString` (which will result in "(Method '__toString' not found)" if missing)
 
 
 ### Checking property existence
@@ -133,3 +142,8 @@ Will unset:
 * Set null with auto getter function set with `addGetter(self::AUTO_PREFIX, 'prefix')` (if exists)
 * Parent object's property with `unset($parent->property)`
 
+------------------------------------------------------
+
+**DynamicObject** was brought to you by [Rafał Lindemann](http://www.stamina.pl/).
+
+<small>Copyright &copy;2013 Rafał Lindemann</small>

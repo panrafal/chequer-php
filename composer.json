@@ -15,6 +15,9 @@
         "php": ">=5.3"
     },
     "autoload": {
-        "psr-0": { "Chequer": "" }
+        "psr-0": { 
+            "Chequer": "",
+            "DynamicObject": "" 
+        }
     }
 }
