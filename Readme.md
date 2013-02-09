@@ -1,16 +1,16 @@
-Chequer (like in check-and-query)
-=================================
+Chequer (as in Check-by-Query) 1.1
+==================================
 
 __Chequer is amazingly fast and magicaly simple.__<br/>
 __As an added bonus, it matches scalars, arrays, objects and grumpy cats against the query of Your choice!__
 
-It's only one lightweight class with one-but-powerfull function. Ok, there are more functions, but there
-is _the one_, that makes all the fuss.
+It's only one lightweight class with one-but-powerfull function. Ok, there are more functions and classes,
+but there is _the one_ that makes all the hustle.
 
 In short - use __queries__ to __match values__. 
 
 What Chequer does differently, is that it doesn't use any additional classes to do it's core work. It's
-self contained in one file and uses only one simple class.
+self contained in one file and uses only one simple class. 
 It's intentional - Chequer is **fast** and **simple**, and loading additional classes through factories is... well, *not*.
 As an added bonus (and by design), you can use plain text config files to setup your validation, and don't have to worry
 about factories and all the bloat.
@@ -18,10 +18,12 @@ about factories and all the bloat.
 But what is most important - Chequer is actually _not designed_ for validation! It simply allows to check
 if something matches the query - so you *can* validate. But, it's a lot more than that! You can validate, 
 check and filter almost anything - be it user input, environment variables, function results, objects, iterators, 
-deep arrays, files and so on.
+deep arrays, files and so on. And as the syntax is quite powerful, you can also query objects and filter
+the results! Whoa!
 
-It's also extensible - you can extend the class with your own operators, and you can use
-closures as checks. Plus it's **MIT** licensed, so share the love and contribute!
+Did I mention it's extensible - you can extend the class with your own operators, you can use
+closures as checks, you can create your own value conversions and you can do it all at runtime. 
+Plus it's **MIT** licensed, so share the love and contribute!
 
 Why another validation library?
 -----------------------------
@@ -29,6 +31,15 @@ Why another validation library?
 Simply because - it's not a validation library! There are many others better suited for this purpose, 
 but there are none (to my knowledge), which allow you to really quickly (in terms of code and execution) 
 check a value - be it simple string, or a complex array.
+
+Wait! There is more!
+--------------------
+
+Part of the package is `DynamicObject` class, which lets you __dynamically create classes__,
+**modify** object's **methods** on the fly, __extend objects__ and moar! [Go check it out](/panrafal/chequer-php/blob/master/DynaminObject.md)!
+It's here to make typecasting easy, but it's pretty awesome on it's own!
+
+---------------------------------------------------------
 
 Install
 -------
@@ -43,6 +54,8 @@ php composer.phar require stamina/chequer-php
 ```
 
 [![Build Status](https://travis-ci.org/panrafal/chequer-php.png?branch=master)](https://travis-ci.org/panrafal/chequer-php)
+
+---------------------------------------------------------
 
 Usage
 -----
@@ -95,17 +108,34 @@ $files = new CallbackFilterIterator($files, new Chequer([
 foreach($files as $file) {}
 ```
 
-Chequer Query Language
---------------
-Query language is modelled a bit after MongoDB. 
-At least the operators start with '$' (use single quotes or escape!) and share the same names.
+---------------------------------------------------------
 
-A `query` can be:
+Chequer Query Language
+----------------------
+Query language is modelled a bit after MongoDB. 
+At least the operators start with '$' (use single quotes or escape!) and share the same names where possible.
+
+Chequer uses three syntaxes at the same time:
+* basic comparison - very basic, see below
+* [key:rule][keyrule] - very fast, based on hashmaps (mongo-like), great for key lookups
+* [shorthand][shorthand] - parsed language, based on strings (sql-like), great for complex queries
+
+Every query operation assumes, that you ask if a `value` matches the `rule`.
+
+Whenever there is a reference to `query` it may be:
 * `Chequer` - the `Chequer` object with a query
 * `scalar` (`string`, `int` etc.) - the value should match the query (with type conversion - 1 == '1')
+  * With an exception, that strings starting with `$` are assumed to be in [shorthand syntax][shorthand].<br/>
+    To use the string, you have to prefix it with '\' (`\$tring!` will match '$tring!'). You should not
+    escape any other character! If you don't use shorthand, you can turn it off entirely.
 * `null` - the value should be exactly `null`
 * `false` - the value should be exactly `false`
-* `true` - the value should be anything `true` in php
+* `true` - the value should be anything `true` in PHP
+* `array` - a complex query in [key:rule syntax][keyrule]
+* `$string` - strings starting with `$` are complex queries in [shorthand syntax][shorthand]
+
+### Key:rule syntax
+[keyrule]: #key-rule-syntax
 * `array` - a complex query with any combination of following **key** => **rule**:
     * `$operator` => operator's parameter <br/>
         one of special operators - ([see operators](#operators))
@@ -122,14 +152,7 @@ A `query` can be:
     * `int` => `query`  <br/>
       check the value with the `query`
 
-With shorthand syntax enabled, which is ON by default, you can also use:
-* `$operator rule` - it's the same as using `['$operator' => 'rule']` <br/>
-    Note that you can stack the rules, if preceding operator accepts them. `'$not $regex /foo/'` will not match "foo"!
-* `$.subkey string` - it's the same as using `['.subkey' => 'rule']`
-* `$ string` - shorthand syntax escaping, the value should equal just the `string` -without the `$ ` prefix
-
-
-### Match All (AND) / Match Any (OR) in complex queries
+__Match All (AND) / Match Any (OR) in complex queries__
 
 By default, every rule in a query should match. This is the `AND` mode. Queries that match a simple
 scalar will default to `OR`.
@@ -146,6 +169,112 @@ Consider these examples
 * *OR* `['foo', '$regex' => 'bar']` because element with index 0 is a scalar
 * *OR* `['$' => 'OR', '$regex' => 'foo', '$not' => 'foobar']` because of `'$'=>'OR'`
 * *OR* `['$or' => ['$regex' => 'foo', '$not' => 'foobar']]` because of `$or`
+
+### Shorthand syntax
+[shorthand]: #shorthand-syntax
+
+Shorthand syntax is all about doing wild stuff on values, and returning the result of the operation.
+
+This shorthand
+```php
+Chequer::checkValue('foo.txt', '$ @file().mtime > -1 day');
+```
+is equivalent to this key:rule:
+```php
+Chequer::checkValue('foo.txt', ['@file().mtime' => ['$gt' => '-1 day']]);
+```
+
+But this:
+```php
+// check if 'foo.txt' was modified around a week ago
+Chequer::checkValue('foo.txt', '$ $abs(@time.now - 1 week - @file().mtime) < 1 day');
+```
+is doable in key:rule, but rather very hard.
+
+The rules of shorthand are:
+* Every shorthand should start with a dollar sign `$`. If first element is an operator, you can
+  use it immediately. Otherwise you have to put a space:
+
+  ```php
+  '$gt 10' // ok!
+  '$> 10' // ok!
+  '$ .subkey > 20' // ok!
+  '$ $gt 10' // ok!
+  '$ 1 + 1 = 2' // ok!
+  '> 10' // NOT ok!
+  '$.key' // NOT ok! 
+  ```
+* To not use the shorthand, escape the first dollar with backslash `\`. `'\\$tring!'`
+* There is **no** operator precedence. Query is evaluated from left to right.
+* You can group operators and values with parentheses `()`.
+* You can quote the strings with either single or double quotes. You can escape the quotes
+  by using backslash `\`. Both are valid: `'this "is" ok' "this 'is' ok two!"`
+* Floating point numbers less than 1 should be prefixed with `0`. This is ok: `$< 0.1`, 
+  this is **not**: `$< .1`. Moreover, the second example will work, because you will fetch a second
+  digit from the number (equivalent to `$value[1]`).
+* To use current `value` use single dot `.`. To access the subkeys use the [dot notation][dotnotation]:
+
+  ```php
+  '$ .' = value
+  '$ .key.subkey' = value['key']['subkey']
+  '$ .method().key' = calls value.method()['key']
+  ```
+* The strings can be unquoted if they don't contain any special characters. These words will be
+  converted into their respectable types:
+
+  ```php
+  '$ 123' = 123;
+  '$ 0.123' = 0.123;
+  '$ TRUE' = true;
+  '$ FALSE' = false;
+  '$ NULL' = null;
+  ```
+* If two values follow each other with a space, they will be concatenated with a space. Otherwise
+  they will be concatenated as is:
+
+  ```php
+  '$ some text' = 'some text'
+  '$ some .subkey text' = 'some SUBKEY text'
+  '$ some.subkey text' = 'someSUBKEY text'
+  '$ some(.subkey)text' = 'someSUBKEYtext'
+  '$ "some".subkey"text"' = 'someSUBKEYtext'
+  '$ 1 "+" 1' = '1 + 1'
+  ```
+* If two values follow each other with a comma, they will be put into an array:
+
+  ```php
+  '$ 1, 2' = [1, 2]
+  '$ one, two, three four' = ['one', 'two', 'three four']
+  ```
+* When calling mathods and typecasts you can follow exactly the same syntax: 
+
+  ```php
+  '$ .myMethod()' - calls myMethod()
+  '$ .myMethod(1, 2, 3)' - calls myMethod(1, 2, 3)
+  '$ .myMethod((1, 2, 3), 4)' - calls myMethod([1, 2, 3], 4)
+  '$ @typecast()' - calls typecast([value])
+  '$ @typecast(1, 2, 3)' - calls typecast([1, 2, 3])
+  '$ @typecast(., 1, 2, 3)' - calls typecast([value, 1, 2, 3])
+  '$ @typecast' - calls typecast()
+  ```
+* The logic behind it, is to collect a `value`, an `operator` and the `parameter`.
+  Afterwards call the operator(value, parameter) and use it's result as the `value` of the next
+  `operator`.
+  * You can skip the `value` - current context's `value` will be used: `$< 10 && > 10` is equivalent 
+    to `$ . < 10 && . > 10`
+  * You can skip the `operator` - the collected values will be the result
+  * If there is no `parameter` but another `operator` follows, it's result will be used as the `parameter`:
+    `'$ $not $regex foo'` will first evaluate `'$regex foo'` and using it's result - `'$not'`.
+* If the value you are trying to access is missing, it will return null. It holds true even if
+  you are trying to access a deep subkey!
+* Operators may throw `\Chequer\BreakException` - this will exit current level with a return value
+  set in the exception. This way `$or` and `$and` are made not greedy.
+    
+Note, that you can disable this syntax by using setShorthandSyntax(). This way, you will not have to
+worry about strings starting with '$'.
+
+------------------------------------------------------------------
+
 
 ### Operators
 
@@ -322,6 +451,7 @@ protected function operator_true($value, $rule) {
 
 Or you can add the operator/alias to the $operators parameter.
 
+---------------------------------------------------------
 
 Note, that the whole idea is very fresh. I've come up with the concept on January 29th, and made the lib the same day. <br/>
 And that means - it *will* change!
