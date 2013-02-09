@@ -246,7 +246,8 @@ The rules of shorthand are:
   '$ 1, 2' = [1, 2]
   '$ one, two, three four' = ['one', 'two', 'three four']
   ```
-* When calling mathods and typecasts you can follow exactly the same syntax: 
+* When calling mathods and typecasts you can follow exactly the same syntax. Remember to put parentheses
+  directly after an identifier - without any whitespace! 
 
   ```php
   '$ .myMethod()' - calls myMethod()
@@ -255,6 +256,9 @@ The rules of shorthand are:
   '$ @typecast()' - calls typecast([value])
   '$ @typecast(1, 2, 3)' - calls typecast([1, 2, 3])
   '$ @typecast(., 1, 2, 3)' - calls typecast([value, 1, 2, 3])
+  '$ .subkey@typecast()' - calls typecast([value['subkey']])
+  '$ .subkey@typecast(.)' - calls typecast([value])
+  '$ @typecast(.subkey)' - calls typecast([value['subkey']])
   '$ @typecast' - calls typecast()
   ```
 * The logic behind it, is to collect a `value`, an `operator` and the `parameter`.
@@ -266,7 +270,7 @@ The rules of shorthand are:
   * If there is no `parameter` but another `operator` follows, it's result will be used as the `parameter`:
     `'$ $not $regex foo'` will first evaluate `'$regex foo'` and using it's result - `'$not'`.
 * If the value you are trying to access is missing, it will return null. It holds true even if
-  you are trying to access a deep subkey!
+  you are trying to access a deep subkey! You can set strict mode to TRUE to throw exceptions instead.
 * Operators may throw `\Chequer\BreakException` - this will exit current level with a return value
   set in the exception. This way `$or` and `$and` are made not greedy.
     

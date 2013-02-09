@@ -36,6 +36,7 @@ namespace {
         protected $matchAll;
         protected $deepArrays;
         protected $shorthandSyntax = true;
+        protected $strictMode = false;
 
         protected $operators = array(
             '=' => 'eq',
@@ -119,6 +120,21 @@ namespace {
          * @return self */
         public function setShorthandSyntax( $shorthandSyntax ) {
             $this->shorthandSyntax = $shorthandSyntax;
+            return $this;
+        }    
+
+
+        public function getStrictMode() {
+            return $this->strictMode;
+        }
+
+
+        /** 
+         * Strict mode will throw exceptions
+         * 
+         * @return self */
+        public function setStrictMode( $strictMode ) {
+            $this->strictMode = $strictMode;
             return $this;
         }    
 
@@ -281,47 +297,30 @@ namespace {
         }
 
 
-        protected function getSubkeyValue( $value, $key, $deepArrays = 0 ) {
-            // dot notation
-            if ($key[0] === '.') {
-                $key = substr($key, 1);
-                if (!$key) return $value;
-                while (($nextKey = strpos($key, '.', 1)) !== false) {
-                    $value = $this->getSubkeyValue($value, substr($key, 0, $nextKey), $deepArrays - 1);
-                    if ($value === null) return null;
-                    $key = substr($key, $nextKey + 1);
-                }
-            }
+        protected function getSubkeyValue( $value, $key, $deepArrays = 0, $findMethod = false ) {
 
-            // @ object typecasting
-            if ($key[0] === '@') {
-                $typecast = substr($key, 1);
-                if (($method = strstr($typecast, '(', true))) {
-                    // typecast current value
-                    return $this->chequerTypecast( $method, array($value) );
-                }
-                // just return the typecast's object
-                return $this->chequerTypecast( $typecast );
-            }
-
-            if (!is_array($value) && !is_object($value))
+            if (!is_array($value) && !is_object($value)) {
+                if ($this->strictMode) 
                     throw new InvalidArgumentException('Array or object required for key matching.');
+                else
+                    return null;
+            }
 
             if (is_array($value) || $value instanceof ArrayAccess) {
                 if (isset($value[$key])) return $value[$key];
             }
             if (is_object($value)) {
-                if (isset($value->$key)) return $value[$key];
-                if (($method = strstr($key, '(', true)) && method_exists($value, $method)) {
-                    return call_user_func(array($value, $method));
+                if ($findMethod && method_exists($value, $key)) {
+                    return array($value, $key);
                 }
+                if (isset($value->$key)) return $value[$key];
             }
             if ($deepArrays > 0 && is_array($value) && isset($value[0])) {
                 --$deepArrays;
                 for ($i = 0, $length = count($value); $i < $length, isset($value[$i]); ++$i) {
                     $subvalue = $value[$i];
                     if (is_array($subvalue) || is_object($subvalue)) {
-                        $subresult = $this->getSubkeyValue($subvalue, $key, $deepArrays);
+                        $subresult = $this->getSubkeyValue($subvalue, $key, $deepArrays, $findMethod);
                         if ($subresult !== null) return $subresult;
                     }
                 }
@@ -331,7 +330,13 @@ namespace {
 
 
         protected function querySubkey( $value, $key, $rule, $deepArrays = 0 ) {
-            $value = $this->getSubkeyValue($value, $key, $deepArrays);
+            if ($key[0] === '.' || $key[0] === '@') {
+                // handle complex subkeys
+                $value = $this->shorthandQuery($value, $key);
+            } else {
+                // handle simple ones
+                $value = $this->getSubkeyValue($value, $key, $deepArrays);
+            }
             return $this->query($value, $rule);
         }
 
@@ -342,6 +347,7 @@ namespace {
             return $this->shorthandParse($tokens, $value);
         }
 
+        
         protected static $shcOperator = array(
             '$' => 1, '!' => 1, '~' => 1, '&' => 1, '^' => 1, '*' => 1, '-' => 1, '+' => 1, 
             '=' => 1, '/' => 1, '|' => 1, '%' => 1, '<' => 1, '>' => 1
@@ -350,37 +356,91 @@ namespace {
             ' ' => 1, "\t" => 1, "\r" => 1, "\n" => 1
         );
         protected static $shcStopchar = array(
-            '$' => 1, '.' => 1, '@' => 1, '(' => 1, ')' => 1, ' ' => 1, "\t" => 1, "\r" => 1, "\n" => 1
+            '$' => 1, '.' => 1, '@' => 1, 
+            '(' => 1, ')' => 1, 
+            '\'' => 1, '"' => 1, 
+            ' ' => 1, "\t" => 1, "\r" => 1, "\n" => 1
         );
+        
         
         /** Collects the value from tokens. Stops only on operators or EOT. */
         protected function shorthandCollectValues(\Chequer\Tokenizer $tokens, $contextValue, &$value) {
             $collected = false;
+            $collectedItem = false;
             $whitespace = '';
             do {
                 $char = $tokens->current[0];
                 $valueItem = null;
                 if ($char === '(') {
-                    // do we have parenthesis? read it...
+                    // parenthesis! read it...
                     $tokens->getToken();
                     // evaluate
                     $valueItem = $this->shorthandParse($tokens, $contextValue);
                 } elseif (isset(self::$shcOperator[$char])) {
-                    // do we have an operator?
+                    // an operator
                     return $collected;
                 } elseif (isset(self::$shcWhitespace[$char])) {
-                    // do we have a whitespace?
+                    // a whitespace
                     $whitespace .= $tokens->getToken();
                     continue;
                 } elseif ($char === '"' || $char === '\'') {
-                    // do we have a quoted string?
+                    // quoted string
                     $valueItem = substr($tokens->getToken(array($char => true)), 1, -1);
                     continue;
+                } elseif ($char === ',') {
+                    // make it into an array
+                    if (!is_array($value)) $value = $collected ? array($value) : array();
+                    $value[] = null;
+                    $collectedItem = false;
                 } elseif ($char === '.' || $char === '@') {
-                    // do we have subkeys?
+                    // subkeys!
+                    $subkeyValue = $contextValue;
+                    do {
+                        $subkey = $tokens->getToken(self::$shcStopchar);
+                    
+                        if ($subkey === '.') {
+                            // do nothing, use current subkeyValue
+                        } elseif ($subkey === '@') {
+                            throw new InvalidArgumentException("Empty @ operator!");
+                        } elseif ($subkey[0] === '@') {
+                            // object typecasting
+                            $typecast = substr($subkey, 1);
+                            if ($tokens->current === '(') {
+                                // method call
+                                $tokens->getToken();
+                                $arguments = $this->shorthandParse($tokens, $contextValue);
+                                if (!$arguments) $arguments = array($subkeyValue);
+                                $subkeyValue = $this->chequerTypecast( $typecast, $arguments );
+                            } else {
+                                // just return the typecast's object
+                                $subkeyValue = $this->chequerTypecast( $typecast );
+                            }
+                        } else {
+                            // standard subkey
+                            $subkey = substr($subkey, 1);
+                            if ($tokens->current === '(') {
+                                // method call
+                                $tokens->getToken();
+                                $arguments = $this->shorthandParse($tokens, $contextValue);
+                                $method = $this->getSubkeyValue($subkeyValue, $subkey, $this->deepArrays, true);
+                                if (!is_callable($method)) {
+                                    if ($this->strictMode) {
+                                        throw new InvalidArgumentException("Subkey '$subkey' is not callable!");
+                                    } else $subkeyValue = null;
+                                }
+                                if (!$arguments) $arguments = array();
+                                $subkeyValue = call_user_func_array($method, $arguments);
+                            } else {
+                                $subkeyValue = $this->getSubkeyValue($subkeyValue, $subkey, $this->deepArrays);
+                            }
+                        }
+                        
+                    } while ($subkeyValue !== null && $tokens->current === '.' || $tokens->current === '@');
+                        
+                    $valueItem = $subkeyValue;
                     
                 } else {
-                    // the rest is a string
+                    // the rest is a string/number/bool/null
                     $valueItem = $tokens->getToken();
                     if (is_numeric($valueItem)) {
                         $valueItem = $valueItem + 0;
@@ -392,6 +452,17 @@ namespace {
                         $valueItem = null;
                     }
                 }
+                
+                // collect the value
+                if (is_array($value)) {
+                    $value[count($value)-1] = $collectedItem ? $whitespace . $valueItem : $valueItem;
+                } else {
+                    $value = $collected ? $whitespace . $valueItem : $valueItem;
+                }
+                $collected = true;
+                $collectedItem = true;
+                $whitespace = '';
+                
             } while ($tokens->current !== null && $tokens->current !== ')');
             return $collected;
         }
