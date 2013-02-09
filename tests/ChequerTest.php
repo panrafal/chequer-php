@@ -243,6 +243,30 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
         $chequer->setQuery('$rule missing');
         $this->assertTrue($chequer->check('foobar'));
     }    
+
+    
+    /**
+     * @dataProvider checkParserProvider
+     */
+    public function testCheckParser( $rule, $data = 1, $expected = true ) {
+        if (is_string($expected)) $this->setExpectedException($expected);
+        $chequer = $this->buildChequer($rule);
+        $this->assertEquals($expected, $chequer->check($data));
+    }
+
+    
+    public function checkParserProvider() {
+        $array = array(
+            array('$ 1  +  1 = 2'),
+            array('$ 1+1=2'),
+            array('$ 1+(2*2) = 5'),
+            array('$ 1+2*2 = 6'),
+        );
+        $result = array();
+        foreach($array as $item) $result[$item[0]] = $item;
+        return $result;
+    }    
+    
     
 }
 

@@ -195,23 +195,15 @@ namespace {
                 // null and false are compared strictly
                 return $value === $query;
             } elseif (is_scalar($query)) {
-                if ($this->shorthandSyntax && is_string($query) && !empty($query) && $query{0} == '$') {
+                if ($this->shorthandSyntax && is_string($query) && strlen($query) > 1 && ($query{0} === '$' || $query{0} === '\\')) {
                     // shorthand syntax
-                    if (($spacePos = strpos($query, ' ')) > 0) {
-                        if ($spacePos > 1) {
-                            // rebuild the query
-                            $query = array(
-                                // handle '$.subkey' syntax
-                                $query[1] == '.' ? substr($query, 1, $spacePos - 1) : substr($query, 0, $spacePos) => substr($query, $spacePos + 1)
-                            );
-                        } else {
-                            // '$ $something' should be escaped to '$something'
-                            return $value == substr($query, 2);
-                        }
-                    } else {
-                        // if there is no space, the query is NOT a shorthand syntax!
-                        return $value == $query;
+                    if ($query{0} === '\\' && $query{1} === '$') {
+                        // unescape and compare
+                        return $value == substr($query, 1);
                     }
+                    // make '$ $op...' into '$op...'
+                    if ($query[1] === ' ') $query = substr($query, 2);
+                    return $this->shorthandQuery($value, $query);
                 } elseif (is_array($value) && is_bool($query) == false) {
                     // string/number queries are searched in arrays
                     return in_array($query, $value);
@@ -343,6 +335,109 @@ namespace {
             return $this->query($value, $rule);
         }
 
+        
+        protected function shorthandQuery($value, $query) {
+            // split query into tokens
+            $tokens = new \Chequer\Tokenizer($query, '/\$[a-z!~&^*\-+=\/|%<>]+|[!~&\^*\-+=\/|%<>]{1,3}|(?<!\.)\d+\.\d+|\d+|[a-z]+|\s+|./i');
+            return $this->shorthandParse($tokens, $value);
+        }
+
+        protected static $shcOperator = array(
+            '$' => 1, '!' => 1, '~' => 1, '&' => 1, '^' => 1, '*' => 1, '-' => 1, '+' => 1, 
+            '=' => 1, '/' => 1, '|' => 1, '%' => 1, '<' => 1, '>' => 1
+        );
+        protected static $shcWhitespace = array(
+            ' ' => 1, "\t" => 1, "\r" => 1, "\n" => 1
+        );
+        protected static $shcStopchar = array(
+            '$' => 1, '.' => 1, '@' => 1, '(' => 1, ')' => 1, ' ' => 1, "\t" => 1, "\r" => 1, "\n" => 1
+        );
+        
+        /** Collects the value from tokens. Stops only on operators or EOT. */
+        protected function shorthandCollectValues(\Chequer\Tokenizer $tokens, $contextValue, &$value) {
+            $collected = false;
+            $whitespace = '';
+            do {
+                $char = $tokens->current[0];
+                $valueItem = null;
+                if ($char === '(') {
+                    // do we have parenthesis? read it...
+                    $tokens->getToken();
+                    // evaluate
+                    $valueItem = $this->shorthandParse($tokens, $contextValue);
+                } elseif (isset(self::$shcOperator[$char])) {
+                    // do we have an operator?
+                    return $collected;
+                } elseif (isset(self::$shcWhitespace[$char])) {
+                    // do we have a whitespace?
+                    $whitespace .= $tokens->getToken();
+                    continue;
+                } elseif ($char === '"' || $char === '\'') {
+                    // do we have a quoted string?
+                    $valueItem = substr($tokens->getToken(array($char => true)), 1, -1);
+                    continue;
+                } elseif ($char === '.' || $char === '@') {
+                    // do we have subkeys?
+                    
+                } else {
+                    // the rest is a string
+                    $valueItem = $tokens->getToken();
+                    if (is_numeric($valueItem)) {
+                        $valueItem = $valueItem + 0;
+                    } elseif ($valueItem === 'TRUE') {
+                        $valueItem = true;
+                    } elseif ($valueItem === 'FALSE') {
+                        $valueItem = false;
+                    } elseif ($valueItem === 'NULL') {
+                        $valueItem = null;
+                    }
+                }
+            } while ($tokens->current !== null && $tokens->current !== ')');
+            return $collected;
+        }
+        
+        protected function shorthandParse(\Chequer\Tokenizer $tokens, $contextValue) {
+            try {
+                $value = null;
+                do {
+                    $operator = null;
+                    $parameter = null;
+                    // collect the values
+                    if (!$this->shorthandCollectValues($tokens, $contextValue, $value))
+                            $value = $contextValue;
+                    // return on EOT or parenthesis close...
+                    if ($tokens->current === null || $tokens->current === ')') {
+                        // read ')'
+                        $tokens->getToken();
+                        return $value;
+                    }
+                    // we have an operator for sure. 
+                    if ($tokens->current[0] !== '$') {
+                        // shorthand syntax, read as is
+                        $tokens->getToken();
+                    } else {
+                        // full syntax, Read until whitespace
+                        $operator = $tokens->getToken(self::$shcStopchar);
+                    }
+                    // collect the parameters
+                    if (!$this->shorthandCollectValues($tokens, $contextValue, $parameter)) {
+                        // another operator?
+                        if ($tokens->current !== null && $tokens->current !== ')') {
+                            $parameter = $this->shorthandParse($tokens, $contextValue);
+                        }
+                    }
+                    $value = $this->chequerOperator($operator, $value, $parameter);
+                } while ($tokens->current !== null && $tokens->current !== ')');
+                // read ')'
+                $tokens->getToken();
+                    
+            } catch (\Chequer\ParseBreakException $e) {
+                return $e->result;
+            }
+            return $value;
+        }
+        
+        /* ---------- operators ------------------------------------------------- */
 
         protected function operator_not( $value, $rule ) {
             return !$this->query($value, $rule);
@@ -471,5 +566,49 @@ namespace {
             return $this->query($value, $this->rules[$rules]);
         }    
 
+    }
+}
+namespace Chequer {
+    class ParseBreakException extends Exception {
+        public $result;
+        function __construct( $result ) {
+            $this->result = $result;
+        }
+    }
+    
+    class Tokenizer {
+        public $tokens;
+        public $position;
+        public $count;
+        public $current;
+        
+        public $escapeChar = '\\';
+        
+        public function __construct($text, $regexp) {
+            // split query into tokens
+            preg_match($regexp, $text, $this->tokens);
+            $this->count = count($this->tokens);
+            $this->current = $this->tokens[0];
+        }
+
+        /** Returns concatenated tokens from current, until first one starting with character in $stopOn */
+        public function getToken($stopOn = false) {
+            $token = $this->current;
+            while(++$this->position < $this->count) {
+                if (($this->current = $this->tokens[$this->position]) === $this->escapeChar) continue;
+                if (!$stopOn || isset($stopOn[$this->current])) return $token;
+                $token .= $this->current;
+            }
+            $this->current = null;
+            return $token;
+        }
+        
+        public function eot() {
+            return $this->current === null;
+        }
+        
+        public function peek() {
+            return $this->current;
+        }
     }
 }
