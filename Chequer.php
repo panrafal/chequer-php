@@ -47,6 +47,12 @@ namespace {
             '<=' => 'lte',
             '!' => 'not',
             '~' => 'regex',
+            '&&' => 'and',
+            '||' => 'or',
+            '+' => 'add',
+            '-' => 'sub',
+            '*' => 'mult',
+            '/' => 'div',
             'rules' => 'rule',
         );
         
@@ -144,14 +150,31 @@ namespace {
             $this->typecasts = array_merge($this->typecasts, $typecasts);
             return $this;
         }
-
-
+        
         /** @return self */
+        public function addTypecast($name, $typecast) {
+            $this->typecasts[$name] = $typecast;
+            return $this;
+        }
+
+
+        /** 
+         * Adds predefined rules.
+         * 
+         * @return self */
         public function addRules($rules) {
             $this->rules = array_merge($this->rules, $rules);
             return $this;
         }
 
+        /** 
+         * Adds a predefined rule.
+         * 
+         * @return self */
+        public function addRule($name, $rule) {
+            $this->rules[$name] = $rule;
+            return $this;
+        }
 
         public function getRules() {
             return $this->rules;
@@ -237,31 +260,37 @@ namespace {
             if ($matchAll === null)
                     $matchAll = false === (isset($query[0]) && is_scalar($query[0]));
 
-            foreach ($query as $key => $rule) {
-                $result = null;
-                if (is_int($key)) {
-                    $result = $this->query($value, $rule);
-                } elseif ($key{0} === '$') {
-                    if ($key === '$') {
-                        $matchAll = ($rule === 'OR' || $rule === 'or') ? false : $rule == true;
-                    } else {
-                        $result = $this->chequerOperator(substr($key, 1), $value, $rule);
+            try {
+                foreach ($query as $key => $rule) {
+                    $result = null;
+                    if (is_int($key)) {
+                        $result = $this->query($value, $rule);
+                    } elseif ($key{0} === '$') {
+                        if ($key === '$') {
+                            $matchAll = ($rule === 'OR' || $rule === 'or') ? false : $rule == true;
+                        } elseif ($key{1} === ' ') {
+                            $result = $this->query($this->shorthandQuery($value, substr($key, 2)), $rule);
+                        } else {
+                            $result = $this->chequerOperator(substr($key, 1), $value, $rule);
+                        }
+                    } else { // look in the array/hashmap
+                        $result = $this->querySubkey($value, $key, $rule, $this->deepArrays);
+                        // for unknown keys check null value
+                        if ($result === null) $result = $this->query(null, $rule);
                     }
-                } else { // look in the array/hashmap
-                    $result = $this->querySubkey($value, $key, $rule, $this->deepArrays);
-                    // for unknown keys check null value
-                    if ($result === null) $result = $this->query(null, $rule);
+                    if ($result === null) continue;
+                    if ($matchAll && !$result) return false;
+                    if (!$matchAll && $result) return true;
                 }
-                if ($result === null) continue;
-                if ($matchAll && !$result) return false;
-                if (!$matchAll && $result) return true;
+            } catch (\Chequer\ParseBreakException $e) {
+                $result = $e->result;
             }
-
-            return $matchAll;
+            return count($query) == 1 ? $result : $matchAll;
         }
 
 
         public function chequerOperator($operator, $value, $rule, $caller = null) {
+            if ($operator[0] === '$') $operator = substr($operator, 1);
             if (isset($this->operators[$operator])) {
                 if (is_string($this->operators[$operator])) {
                     $operator = $this->operators[$operator];
@@ -286,7 +315,7 @@ namespace {
                 } elseif (!is_scalar($typecastObj) && is_callable($typecastObj)) {
                     return call_user_func_array($typecastObj, $callArgs);
                 } else {
-                    throw new Exception("Typecast '$typecast' cannot be called!");
+                    throw new \Chequer\ParseException("Typecast '$typecast' cannot be called!");
                 }
             }
             // if it's not user-defined, we try to ask the value itself
@@ -301,7 +330,7 @@ namespace {
 
             if (!is_array($value) && !is_object($value)) {
                 if ($this->strictMode) 
-                    throw new InvalidArgumentException('Array or object required for key matching.');
+                    throw new \Chequer\ParseException('Array or object required for key matching.');
                 else
                     return null;
             }
@@ -385,6 +414,7 @@ namespace {
                     continue;
                 } elseif ($char === '"' || $char === '\'') {
                     // quoted string
+                    $whitespace = '';
                     $valueItem = substr($tokens->getToken(array($char => true)), 1, -1);
                     continue;
                 } elseif ($char === ',') {
@@ -401,7 +431,7 @@ namespace {
                         if ($subkey === '.') {
                             // do nothing, use current subkeyValue
                         } elseif ($subkey === '@') {
-                            throw new InvalidArgumentException("Empty @ operator!");
+                            throw new \Chequer\ParseException("Empty @ operator!");
                         } elseif ($subkey[0] === '@') {
                             // object typecasting
                             $typecast = substr($subkey, 1);
@@ -425,7 +455,7 @@ namespace {
                                 $method = $this->getSubkeyValue($subkeyValue, $subkey, $this->deepArrays, true);
                                 if (!is_callable($method)) {
                                     if ($this->strictMode) {
-                                        throw new InvalidArgumentException("Subkey '$subkey' is not callable!");
+                                        throw new \Chequer\ParseException("Subkey '$subkey' is not callable!");
                                     } else $subkeyValue = null;
                                 }
                                 if (!$arguments) $arguments = array();
@@ -503,9 +533,14 @@ namespace {
                 $tokens->getToken();
                     
             } catch (\Chequer\ParseBreakException $e) {
+                $this->shorthandFastforward($tokens, array(')' => true));
                 return $e->result;
             }
             return $value;
+        }
+        
+        protected function shorthandFastforward(Nette\Utils\Tokenizer $tokens, $until) {
+            
         }
         
         /* ---------- operators ------------------------------------------------- */
@@ -552,26 +587,46 @@ namespace {
 
         protected function operator_between( $value, $rule ) {
             if (count($rule) != 2)
-                    throw new InvalidArgumentException('Two element array required for $between!');
+                    throw new Chequer\ParseBreakException('Two element array required for $between!');
             return $value >= $rule[0] && $value <= $rule[1];
         }
 
+        protected function operator_in( $value, $rule ) {
+            if (is_scalar($rule)) return $value == $rule;
+            return in_array($value, $rule);
+        }        
 
         protected function operator_or( $value, $rule ) {
-            return $this->query($value, $rule, false);
+            if (is_scalar($rule)) {
+                if ($value || $rule) {
+                    throw new Chequer\ParseBreakException(true);
+                } else {
+                    return false;
+                }
+            } else {
+                return $this->query($value, $rule, false);
+            }
         }
 
 
         protected function operator_and( $value, $rule ) {
-            return $this->query($value, $rule, true);
+            if (is_scalar($rule)) {
+                if ($value && $rule) {
+                    return true;
+                } else {
+                    throw new Chequer\ParseBreakException(false);
+                }
+            } else {
+                return $this->query($value, $rule, true);
+            }
         }
 
 
         protected function operator_regex( $value, $rule ) {
             if (!is_scalar($value) && !method_exists($value, '__toString'))
-                    throw new InvalidArgumentException('String required for regex matching.');
-            if ($rule[0] !== '/' && $rule[0] !== '#') {
-                $rule = "#{$rule}#";
+                    throw new \Chequer\ParseException('String required for regex matching.');
+            if ($rule[0] !== '/' && $rule[0] !== '#' && $rule[0] !== '~') {
+                $rule = "~{$rule}~";
             }
             return preg_match($rule, $value) == true;
         }
@@ -624,29 +679,70 @@ namespace {
                     } elseif ($rule === 'OR') {
                         $query['$'] = 'OR';
                     } else {
-                        if (!isset($this->rules[$rule])) throw new Exception("Rule '$rule' is undefined!");
+                        if (!isset($this->rules[$rule])) throw new \Chequer\ParseException("Rule '$rule' is undefined!");
                         $query[] = $this->rules[$rule];
                     }
                 }
                 return $this->query($value, $query);
             } else {
-                if (!isset($this->rules[$rules[0]])) throw new Exception("Rule '{$rules[0]}' is undefined!");
+                if (!isset($this->rules[$rules[0]])) throw new \Chequer\ParseException("Rule '{$rules[0]}' is undefined!");
                 return $this->query($value, $this->rules[$rules[0]]);
             }
 
             return $this->query($value, $this->rules[$rules]);
         }    
 
+        protected function operator_add( $value, $operand ) {
+            if (is_numeric($operand) && is_numeric($operand)) {
+                return $value + $operand;
+            }
+            if (is_array($operand)) {
+                return array_merge((array)$value, $operand);
+            }
+            if (is_array($value)) {
+                $value[] = $operand;
+                return $value;
+            }
+            return $value . $operand;
+        }        
+        
+
+        protected function operator_sub( $value, $operand ) {
+            if (is_numeric($operand) && is_numeric($operand)) {
+                return $value - $operand;
+            }
+            if (is_array($operand)) {
+                return array_diff((array)$value, $operand);
+            }
+            if (is_array($value)) {
+                return array_filter($value, function($a) use ($operand) {return $a !== $operand;});
+            }
+            return str_replace($operand, '', $value);
+        }        
+        
+        protected function operator_mult( $value, $operand ) {
+            return $value * $operand;
+        }        
+        
+        protected function operator_div( $value, $operand ) {
+            return $value / $operand;
+        }        
+        
     }
 }
 namespace Chequer {
-    class ParseBreakException extends Exception {
+    class ParseBreakException extends \Exception {
         public $result;
         function __construct( $result ) {
             $this->result = $result;
         }
     }
     
+    class ParseException extends \Exception {
+        
+    }
+    
+    /** Ultra-fast tokenizer */
     class Tokenizer {
         public $tokens;
         public $position;
@@ -662,7 +758,11 @@ namespace Chequer {
             $this->current = $this->tokens[0];
         }
 
-        /** Returns concatenated tokens from current, until first one starting with character in $stopOn */
+        /** Returns concatenated tokens from current, until first one starting with character in $stopOn.
+         * Moves the current token to new position.
+         * 
+         * @param $stopOn Hashmap of characters to stop on. array('char' => 1). If FALSE, will fetch only current token.
+         */
         public function getToken($stopOn = false) {
             $token = $this->current;
             while(++$this->position < $this->count) {

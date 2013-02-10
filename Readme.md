@@ -10,16 +10,18 @@ but there is _the one_ that makes all the hustle.
 In short - use __queries__ to __match values__. 
 
 What Chequer does differently, is that it doesn't use any additional classes to do it's core work. It's
-self contained in one file and uses only one simple class. 
+self contained in one file and uses only one simple class. You don't construct validation rules, 
+you just pass a query in of three simple syntaxes - depending on what you need.
+
 It's intentional - Chequer is **fast** and **simple**, and loading additional classes through factories is... well, *not*.
-As an added bonus (and by design), you can use plain text config files to setup your validation, and don't have to worry
-about factories and all the bloat.
+As an added bonus (and by design), you can use plain text (think config files, command line) to setup your validation! 
+And you don't have to worry about factories and all the bloat!
 
 But what is most important - Chequer is actually _not designed_ for validation! It simply allows to check
 if something matches the query - so you *can* validate. But, it's a lot more than that! You can validate, 
 check and filter almost anything - be it user input, environment variables, function results, objects, iterators, 
-deep arrays, files and so on. And as the syntax is quite powerful, you can also query objects and filter
-the results! Whoa!
+deep arrays, files and so on. And as the syntax is quite powerful, you can also query objects, 
+call methods, convert results... Whoa!
 
 Did I mention it's extensible - you can extend the class with your own operators, you can use
 closures as checks, you can create your own value conversions and you can do it all at runtime. 
@@ -102,8 +104,8 @@ This will iterate through files with 'php' or 'html' extensions, that are older 
 ```php
 $files = new FilesystemIterator(dirname(__DIR__));
 $files = new CallbackFilterIterator($files, new Chequer([
-        'getExtension()' => ['php', 'html']
-        'getMTime()' => ['$lt' => strtotime('-1 day')]
+        '.getExtension()' => ['php', 'html']
+        '.getMTime()' => ['$lt' => strtotime('-1 day')]
     ]));
 foreach($files as $file) {}
 ```
@@ -137,20 +139,22 @@ Whenever there is a reference to `query` it may be:
 ### Key:rule syntax
 [keyrule]: #key-rule-syntax
 * `array` - a complex query with any combination of following **key** => **rule**:
-    * `$operator` => operator's parameter <br/>
+    * `'$operator'` => operator's parameter <br/>
         one of special operators - ([see operators](#operators))
-    * '$' => `bool` | `'AND'` | `'OR'`  <br/>
+    * `'$'` => `bool` | `'AND'` | `'OR'`  <br/>
       `true` and `'AND'` will set this query to `AND` mode, `false` and `'OR'` will set it to `OR`
     * `string` => `query`  <br/>
       check the value's `subkey` with the `query` - ([see subkeys](#subkeys))
-    * `@typecast` => `query`<br/>
+    * `'@typecast'` => `query`<br/>
       get the `typecast` value and check it against the `query` - ([see typecasts](#typecasts))
-    * `@typecast()` => `query`<br/>
+    * `'@typecast()'` => `query`<br/>
       convert current value using the `typecast` and check it against the `query` - ([see typecasts](#typecasts))
-    * `.subkey1.subkey2` => `query`<br/>
+    * `'.subkey1.subkey2'` => `query`<br/>
       check the value's two (and more) `subkey`s deep with the `query` - ([see subkeys](#subkeys))
     * `int` => `query`  <br/>
-      check the value with the `query`
+      check the `value` with the `query`
+    * `'$ shorthand'` => `query` <br/>
+      [shorthand query][shorthand] which will be checked with the `query`
 
 __Match All (AND) / Match Any (OR) in complex queries__
 
@@ -229,16 +233,18 @@ The rules of shorthand are:
   '$ FALSE' = false;
   '$ NULL' = null;
   ```
-* If two values follow each other with a space, they will be concatenated with a space. Otherwise
-  they will be concatenated as is:
-
+* **Whitespace** between values is preserved. It's ignored before first value, after last one
+  and before quoted strings.
+  
   ```php
   '$ some text' = 'some text'
+  '$ some text  +  more text' = 'some textmore text'
   '$ some .subkey text' = 'some SUBKEY text'
   '$ some.subkey text' = 'someSUBKEY text'
-  '$ some(.subkey)text' = 'someSUBKEYtext'
-  '$ "some".subkey"text"' = 'someSUBKEYtext'
-  '$ 1 "+" 1' = '1 + 1'
+  '$ some(.subkey) text' = 'someSUBKEY text'
+  '$ "some" .subkey "text"' = 'someSUBKEYtext'
+  '$ "some" .subkey "text"' = 'someSUBKEYtext'
+  '$ 1 "+" 1 = "2"' = '1+1 =2'
   ```
 * If two values follow each other with a comma, they will be put into an array:
 
@@ -282,21 +288,49 @@ worry about strings starting with '$'.
 
 ### Operators
 
+Operators start with a `$`, accept a `value`, a `parameter` and return the `result`. Some operators
+have short versions (`!`, `+`, `>` ...), but they still have to be used with `$` if outside of the
+shorthand syntax.
+
 The currently available operators are:
 * `$` => `true` | `1` | `'AND'` <br/>
   Enables AND mode, requiring every rule to match
 * `$` => `false` | `0` | `'OR'` <br/>
   Enables OR mode, only single rule has to match
-* `$and` => [`query`, `query`, ...]  <br/>
-  matches all queries
-* `$or` => [`query`, `query`, ...]  <br/>
-  matches any query
+* `$and` => [`query`, `query`, ...] | `scalar` <br/>
+  When array is passed, all queries will have to match. Useful in [key:rule syntax][keyrule].<br/>
+  When a scalar is matched, then both `value` and `scalar` have to be true. Otherwise matching is stopped
+  at this level.
+  ```php
+  Chequer::checkValue(FALSE, [
+    '$and' => true, // value is FALSE, next rule won't be evaluated
+    '$gt' => 10
+  ]);
+  ```
+
+  Watch out for passing arrays in `shorthand`! This will essentialy call `operator_and([1,2,3], [1,2,3])`, which means: <br/>
+  `value` = [1,2,3] must match `1`, `2` and `3`.
+  ```php
+  Chequer::checkValue([1,2,3], '$ . && .');
+  ```
+
+  But it may be very helpfull too. This will check if `value` = 'foobar' is `"foo"` or `"bar"` or matches
+  regular expression `/foo/`!
+  ```php
+  Chequer::checkValue('foobar', '$ . || "foo", "bar", "$~ foo"');
+  ```
+
+  ```
+* `$or` => [`query`, `query`, ...] | `scalar` <br/>
+  When array is passed, only one query will have to match. Useful in [key:rule syntax][keyrule].<br/>
+  When a scalar is matched, then `value` or `scalar` have to be true. If true, matching is stopped
+  at this level. See examples for `$end`.
 * `$not` | `$!` => `query`  <br/>
   negates the `query`
-* `$regex` | `$~` => '/regexp/' | '#regexp#' | 'regexp' <br/>
+* `$regex` | `$~` => '/regexp/flags' | '#regexp#flags' | '~regexp~flags' | 'regexp' <br/>
   Matches strings using regular expressions.<br/>
-  With third syntax, regular expression is automatically enclosed in '#' character, so it's safe to use
-  `/` in the expression.
+  With third syntax, regular expression is automatically enclosed in '~' character, so it's safe to use
+  `/` without escaping.
 * `$eq` => `compare`  <br/>
   matches value using loose operator (==)
 * `$same` => `compare`  <br/>
@@ -306,7 +340,27 @@ The currently available operators are:
 * `$gt`|`$gte`|`$lt`|`$lte` | `$>`|`$>=`|`$<`|`$<=` => `compare` <br/>
   greater-than|lower-than comparisons
 * `$between` => [`lower`, `upper`] <br/>
-  checks if value is between lower and upper bounds (inclusive)
+  checks if `value` is between lower and upper bounds (inclusive)
+* `$in` => [`compare`, `compare`, ...]
+  checks if `value` is on the list
+* `$add` | `+` => `second_value` <br/>
+  Addition
+  * if both values are numeric, they will be added,
+  * if `second_value` is an array, it will be merged with `value`,
+  * if `value` is an array, but `second_value` is not, it will be pushed,
+  * otherwise it will concatenate strings
+* `$sub` | `-` => `second_value` <br/>
+  Substraction
+  * if both values are numeric, they will be substracted,
+  * if `second_value` is an array, it will be substracted from `value`,
+  * if `value` is an array, but `second_value` is not, it will be removed,
+  * otherwise it will remove the `second_value` from the string
+* `$mult` | `*` => `second_value` <br/>
+  Multiplication
+  * if both values are numeric, they will be multiplicated
+* `$div` | `/` => `second_value` <br/>
+  Division
+  * if both values are numeric, they will be divided
 * `$check` => `callable` <br/>
   matches if callable($value) returns TRUE
 * `$size` => `query` <br/>
