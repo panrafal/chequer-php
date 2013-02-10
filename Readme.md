@@ -1,5 +1,5 @@
-Chequer (as in Check-by-Query) 1.1
-==================================
+Chequer (as in Check-with-Query) 1.1
+====================================
 
 __Chequer is amazingly fast and magicaly simple.__<br/>
 __As an added bonus, it matches scalars, arrays, objects and grumpy cats against the query of Your choice!__
@@ -208,22 +208,22 @@ The rules of shorthand are:
   '> 10' // NOT ok!
   '$.key' // NOT ok! 
   ```
-* To not use the shorthand, escape the first dollar with backslash `\`. `'\\$tring!'`
-* There is **no** operator precedence. Query is evaluated from left to right.
-* You can group operators and values with parentheses `()`.
-* You can quote the strings with either single or double quotes. You can escape the quotes
+* To not use the shorthand, **escape** the first dollar with backslash `\`. `'\\$tring!'`
+* There is __no operator precedence__. Query is evaluated from left to right.
+* You can **group** operators and values with parentheses `()`.
+* You can **quote** the strings with either single or double quotes. You can escape the quotes
   by using backslash `\`. Both are valid: `'this "is" ok' "this 'is' ok two!"`
-* Floating point numbers less than 1 should be prefixed with `0`. This is ok: `$< 0.1`, 
+* Floating point **numbers** less than 1 should be prefixed with `0`. This is ok: `$< 0.1`, 
   this is **not**: `$< .1`. Moreover, the second example will work, because you will fetch a second
   digit from the number (equivalent to `$value[1]`).
-* To use current `value` use single dot `.`. To access the subkeys use the [dot notation][dotnotation]:
+* To use **current** `value` use single dot `.`. To access the subkeys use the [dot notation][dotnotation]:
 
   ```php
   '$ .' = value
   '$ .key.subkey' = value['key']['subkey']
   '$ .method().key' = calls value.method()['key']
   ```
-* The strings can be unquoted if they don't contain any special characters. These words will be
+* The **strings** can be unquoted if they don't contain any special characters. These words will be
   converted into their respectable types:
 
   ```php
@@ -246,11 +246,21 @@ The rules of shorthand are:
   '$ "some" .subkey "text"' = 'someSUBKEYtext'
   '$ 1 "+" 1 = "2"' = '1+1 =2'
   ```
-* If two values follow each other with a comma, they will be put into an array:
+* If two values follow each other with a comma `,`, they will be put into an **array**:
 
   ```php
   '$ 1, 2' = [1, 2]
   '$ one, two, three four' = ['one', 'two', 'three four']
+  '$ one, two, (three, four)' = ['one', 'two', ['three', 'four']]
+  ```
+* If value is immediately followed by a colon `:`, the next value will be put under that key in a **hashmap**.<br/>
+  Note, that key name should not have any unquoted or unparenthesized white spaces!
+  ```php
+  '$ 1, two:2' = ['1', 'two' => 2]
+  '$ (@time.year):"Now!"' = [2013 => 'Now!']
+  '$ year @time.year:"Now!"' = ['year', 2013 => 'Now!'] // unsecured whitespace!
+  '$ (year @time.year):"Now!"' = ['year 2013' => 'Now!'] // now it's ok!
+
   ```
 * When calling mathods and typecasts you can follow exactly the same syntax. Remember to put parentheses
   directly after an identifier - without any whitespace! 
@@ -293,11 +303,14 @@ have short versions (`!`, `+`, `>` ...), but they still have to be used with `$`
 shorthand syntax.
 
 The currently available operators are:
-* `$` => `true` | `1` | `'AND'` <br/>
+* `$` => `true` | `1` | `'AND'`
+
   Enables AND mode, requiring every rule to match
-* `$` => `false` | `0` | `'OR'` <br/>
+* `$` => `false` | `0` | `'OR'`
+
   Enables OR mode, only single rule has to match
-* `$and` => [`query`, `query`, ...] | `scalar` <br/>
+* `$and` => [`query`, `query`, ...] | `scalar`
+
   When array is passed, all queries will have to match. Useful in [key:rule syntax][keyrule].<br/>
   When a scalar is matched, then both `value` and `scalar` have to be true. Otherwise matching is stopped
   at this level.
@@ -319,53 +332,67 @@ The currently available operators are:
   ```php
   Chequer::checkValue('foobar', '$ . || "foo", "bar", "$~ foo"');
   ```
+* `$or` => [`query`, `query`, ...] | `scalar`
 
-  ```
-* `$or` => [`query`, `query`, ...] | `scalar` <br/>
   When array is passed, only one query will have to match. Useful in [key:rule syntax][keyrule].<br/>
   When a scalar is matched, then `value` or `scalar` have to be true. If true, matching is stopped
   at this level. See examples for `$end`.
-* `$not` | `$!` => `query`  <br/>
+* `$not` | `$!` => `query`
+
   negates the `query`
-* `$regex` | `$~` => '/regexp/flags' | '#regexp#flags' | '~regexp~flags' | 'regexp' <br/>
+* `$regex` | `$~` => '/regexp/flags' | '#regexp#flags' | '~regexp~flags' | 'regexp'
+
   Matches strings using regular expressions.<br/>
   With third syntax, regular expression is automatically enclosed in '~' character, so it's safe to use
   `/` without escaping.
-* `$eq` => `compare`  <br/>
+* `$eq` => `compare`
+
   matches value using loose operator (==)
-* `$same` => `compare`  <br/>
+* `$same` => `compare`
+
   matches value using strict operator (===)
-* `$nc` => `compare`  <br/>
+* `$nc` => `compare`
+
   not case-sensitive comparison (multibyte)
-* `$gt`|`$gte`|`$lt`|`$lte` | `$>`|`$>=`|`$<`|`$<=` => `compare` <br/>
+* `$gt`|`$gte`|`$lt`|`$lte` | `$>`|`$>=`|`$<`|`$<=` => `compare`
+
   greater-than|lower-than comparisons
-* `$between` => [`lower`, `upper`] <br/>
+* `$between` => [`lower`, `upper`]
+
   checks if `value` is between lower and upper bounds (inclusive)
 * `$in` => [`compare`, `compare`, ...]
+
   checks if `value` is on the list
-* `$add` | `+` => `second_value` <br/>
+* `$add` | `+` => `second_value`
+
   Addition
   * if both values are numeric, they will be added,
   * if `second_value` is an array, it will be merged with `value`,
   * if `value` is an array, but `second_value` is not, it will be pushed,
   * otherwise it will concatenate strings
-* `$sub` | `-` => `second_value` <br/>
+* `$sub` | `-` => `second_value`
+
   Substraction
   * if both values are numeric, they will be substracted,
   * if `second_value` is an array, it will be substracted from `value`,
   * if `value` is an array, but `second_value` is not, it will be removed,
   * otherwise it will remove the `second_value` from the string
-* `$mult` | `*` => `second_value` <br/>
+* `$mult` | `*` => `second_value`
+
   Multiplication
   * if both values are numeric, they will be multiplicated
-* `$div` | `/` => `second_value` <br/>
+* `$div` | `/` => `second_value`
+
   Division
   * if both values are numeric, they will be divided
-* `$check` => `callable` <br/>
+* `$check` => `callable`
+
   matches if callable($value) returns TRUE
-* `$size` => `query` <br/>
+* `$size` => `query`
+
   checks the size of array or string using the `query`
-* `$rule` => [`rulename1`,`rulename2`] | '`rulename1` `rulename2`' <br/>
+* `$rule` => [`rulename1`,`rulename2`] | '`rulename1` `rulename2`'
+
   allows to reuse predefined rules, which you can set with addRules().
   You can specify many rules as an array, or space delimited string. 
 
@@ -375,7 +402,8 @@ The currently available operators are:
   $checker->query(..., '$rule email AND lowercase'); // this is equivalent to the former
   $checker->query(..., '$rule email OR lowercase');
   ```
-* `$cmp` => [`value1`, `operator`, `value2`] | '`value1` `operator` `value2`'<br/>
+* `$cmp` => [`value1`, `operator`, `value2`] | '`value1` `operator` `value2`'
+
   compares two `values` using the `operator`. Values should be subkeys provided in dot notation.<br/>
   Value of `value2` will be passed to operators as-is. This means it can be used as a query!
   ```php
@@ -403,6 +431,17 @@ The currently available operators are:
       ->addTypecasts('example' => ['$regex' => '$~ .*foo.*'])
       ->check('foo');
   ```
+* `$eval` => [`$query`, `query`, ...]
+
+  Evaluates every query by passing the `result` as the next query's `value`.
+
+  ```php
+  // the result is 3:
+  Chequer::checkValue(1, [
+    ['$eval' => ['$add' => 1, '$add' => 1]]
+  ]);
+  ```
+
 
 
 

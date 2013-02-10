@@ -385,7 +385,7 @@ namespace {
             ' ' => 1, "\t" => 1, "\r" => 1, "\n" => 1
         );
         protected static $shcStopchar = array(
-            '$' => 1, '.' => 1, '@' => 1, 
+            '$' => 1, '.' => 1, '@' => 1, ':' => 1,
             '(' => 1, ')' => 1, 
             '\'' => 1, '"' => 1, 
             ' ' => 1, "\t" => 1, "\r" => 1, "\n" => 1
@@ -396,6 +396,7 @@ namespace {
         protected function shorthandCollectValues(\Chequer\Tokenizer $tokens, $contextValue, &$value) {
             $collected = false;
             $collectedItem = false;
+            $collectedKey = null;
             $whitespace = '';
             do {
                 $char = $tokens->current[0];
@@ -419,8 +420,10 @@ namespace {
                     continue;
                 } elseif ($char === ',') {
                     // make it into an array
-                    if (!is_array($value)) $value = $collected ? array($value) : array();
-                    $value[] = null;
+                    if (!is_array($value)) {
+                        $value = $collected ? array($value) : array();
+                    }
+                    $collectedKey = count($value);
                     $collectedItem = false;
                 } elseif ($char === '.' || $char === '@') {
                     // subkeys!
@@ -469,7 +472,7 @@ namespace {
                         
                     $valueItem = $subkeyValue;
                     
-                } else {
+                } elseif ($tokens->current !== ':') {
                     // the rest is a string/number/bool/null
                     $valueItem = $tokens->getToken();
                     if (is_numeric($valueItem)) {
@@ -483,14 +486,25 @@ namespace {
                     }
                 }
                 
-                // collect the value
-                if (is_array($value)) {
-                    $value[count($value)-1] = $collectedItem ? $whitespace . $valueItem : $valueItem;
+                if ($tokens->current === ':') {
+                    // key
+                    $whitespace = '';
+                    $collectedKey = $valueItem;
+                    $collectedItem = false;
+                    if (!is_array($value)) {
+                        $value = $collected ? array($value) : array();
+                    }
                 } else {
-                    $value = $collected ? $whitespace . $valueItem : $valueItem;
+                    // collect the value
+                    if (is_array($value)) {
+                        $value[$collectedKey === null ? count($value)-1 : $collectedKey] = $collectedItem ? $whitespace . $valueItem : $valueItem;
+                    } else {
+                        $value = $collected ? $whitespace . $valueItem : $valueItem;
+                    }
+                    $collected = true;
+                    $collectedItem = true;
+                    $collectedKey = null;
                 }
-                $collected = true;
-                $collectedItem = true;
                 $whitespace = '';
                 
             } while ($tokens->current !== null && $tokens->current !== ')');
@@ -667,6 +681,13 @@ namespace {
             }
         }
 
+        protected function operator_eval( $value, $rule ) {
+            if (!is_array($rule)) throw new \Chequer\ParseException('$eval rule should be an array!');
+            foreach($rule as $query) {
+                $value = $this->query($value, $query);
+            }
+            return $value;
+        }        
 
         protected function operator_rule( $value, $rules ) {
             if (!is_array($rules)) $rules = preg_split('/ *,? +/', $rules);
