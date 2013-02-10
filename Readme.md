@@ -223,8 +223,8 @@ The rules of shorthand are:
   '$ .key.subkey' = value['key']['subkey']
   '$ .method().key' = calls value.method()['key']
   ```
-* The **strings** can be unquoted if they don't contain any special characters. These words will be
-  converted into their respectable types:
+* The **strings** can be unquoted if they don't contain any special characters. 
+  These words will be converted into their respectable types:
 
   ```php
   '$ 123' = 123;
@@ -246,6 +246,15 @@ The rules of shorthand are:
   '$ some( .subkey) "te""xt"' = 'someSUBKEYtext'
   '$ 1 "+" 1 + "=" 2' = '1+ 1= 2'
   ```
+* Concatenation of types different then strings is undefined. Currently
+numbers will be treated as strings, FALSE is not represented, TRUE is 1 and
+arrays are changed to '(Array)'. This may change, so don't rely on it
+
+  ```php
+  '$    array is (1,2,3) numbers are 1 2 3 false is FALSE true is TRUE null is NULL' 
+     = 'array is (Array) numbers are 1 2 3 false is  true is  null is '
+  ```
+
 * If two values follow each other with a comma `,`, they will be put into an **array**:
 
   ```php

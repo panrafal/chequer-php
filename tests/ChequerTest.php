@@ -122,13 +122,23 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             array('1, 2', array(1, 2)),
             array('one, two, three four', array('one', 'two', 'three four')),
             array('one, two, (three, four)', array('one', 'two', array('three', 'four'))),
-            array('one two (three, four) five six (seven) (eight, nine)', array('one two', array('three', 'four'), 'five six seven', array('eight', 'nine'))),
-            array('zero (one, two) three four (five, six) seven eight', array(
-                'zero', array('one', 'two'), 'three four', array('five', 'six'), 'seven eight')
-            ),
-            array('(one, two), three four (five, six) seven eight', array(
-                array('one', 'two'), 'three four', array('five', 'six'), 'seven eight')
-            ),
+            array('array is (1, 2, 3) numbers are 1 2 3 false is FALSE true is TRUE null is NULL', 
+                  'array is (Array) numbers are 1 2 3 false is  true is  null is '),
+
+            array('()', null, null),
+            array('(,)', array()),
+            array('(,NULL)', array(null)),
+            array('1,(1+1),(,1+2)', array(1,2,array(3))),
+            array('1,1+1,(,1+2),1 ! > 2, 1 > 2', array(1,2,array(3), true, false)),
+            
+            
+//            array('one two (three, four) five six (seven) (eight, nine)', array('one two', array('three', 'four'), 'five six seven', array('eight', 'nine'))),
+//            array('zero (one, two) three four (five, six) seven eight', array(
+//                'zero', array('one', 'two'), 'three four', array('five', 'six'), 'seven eight')
+//            ),
+//            array('(one, two), three four (five, six) seven eight', array(
+//                array('one', 'two'), 'three four', array('five', 'six'), 'seven eight')
+//            ),
             
             array('1, two:2', array(1, 'two' => 2)),
             array('1 2, 3, four:4, five:5 (six:6) four:FOUR', array(
