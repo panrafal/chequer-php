@@ -3,7 +3,9 @@
 require_once __DIR__ . '/../Chequer.php';
 
 class ChequerTest_Object {
-    
+    function test($val = 'test') {
+        return $val;
+    }
 }
 
 class ChequerTest extends PHPUnit_Framework_TestCase {
@@ -18,6 +20,7 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
                     'hashmap' => array('one' => 'ONE', 'two' => 'TWO', 3, 'sub' => array(1, 2, 'foo' => 'BAR')),
                     'object' => new ChequerTest_Object(),
                     'number' => 1,
+                    'subkey' => 'SUBKEY',
                     array(
                         'hello' => 'World!',
                     ),
@@ -38,6 +41,140 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
         return new Chequer($rules, $matchAll);
     }
 
+    
+    /**
+     * @dataProvider checkOperatorsProvider
+     */
+    public function testCheckOperators( $expected, $data, $rules ) {
+        if (is_string($expected)) $this->setExpectedException($expected);
+        $chequer = $this->buildChequer($rules);
+        $this->assertEquals($expected, $chequer->check($data));
+    }
+
+    
+    
+    public function checkOperatorsProvider() {
+        return array(
+            'true' => array(true, 1, '1'),
+            'false' => array(false, 1, 'blah'),
+            'not-false' => array(false, 1, '$not 1'),
+            'not-true' => array(true, 1, '$not blah'),
+            
+            'eq-true' => array(true, 1, array('$eq' => 1)),
+            'eq-true2' => array(true, 1, array('$eq' => '1')),
+            'eq-true3' => array(true, 1, array('$eq' => '01')),
+            'same-true' => array(true, 1, array('$same' => 1)),
+            'same-false' => array(false, 1, array('$same' => '1')),
+            'same-short-false' => array(false, 1, '$== 1'),
+            
+            'cmp3' => array(true, array('one' => 1, 'two' => 2), array('$cmp' => '.two > .one')),
+            // checks if size of the array is 2
+            'cmp2' => array(true, array('one' => 1, 'two' => 2), array('$cmp' => 'size .two')),
+            'cmp2-dollar' => array(true, array('one' => 1, 'two' => 2), array('$cmp' => '$size .two')),
+            // checks if array(1,2) contains value 2
+            'cmp-dollar' => array(true, array(1, 2), array('$cmp' => '.1')),
+            // checks if array(1,2) equals itself
+            'cmp-dollar' => array(true, array(1, 2), array('$cmp' => '.')),
+            );
+    }    
+    
+    
+    
+    /**
+     * @group dev
+     * @dataProvider checkShorthandProvider
+     */
+    public function testCheckShorthand( $query, $expected = true, $value = null ) {
+        if ($expected instanceof Exception) $this->setExpectedException(get_class($expected));
+        if ($value === null) $value = $this->data;
+        $chequer = $this->buildChequer();
+        $chequer->setStrictMode(true);
+        $this->assertEquals($expected, $chequer->shorthandQuery($value, $query));
+    }
+
+    
+    public function checkShorthandProvider() {
+        $array = array(
+            array('$ 1', 1),
+            array('0.1', 0.1),
+            array('TRUE', true),
+            array('FALSE', false),
+            array('NULL', null),
+            array('true', 'true'),
+            array('false', 'false'),
+            array('null', 'null'),
+            array('foo bar', 'foo bar'),
+            array('$ foo bar', 'foo bar'),
+            array('$   foo bar', 'foo bar'),
+            array('foo1 bar 2', 'foo1 bar 2'),
+            array('\'this "is" ok\' " this \'is\' ok two!"', 'this "is" ok this \'is\' ok two!'),
+            array('.', 123, 123),
+            
+            array('some text', 'some text'),
+            array('some text  +  more text', 'some textmore text'),
+            array('some .subkey text', 'some SUBKEY text'),
+            array('some.subkey text', 'someSUBKEY text'),
+            array('some(.subkey) text', 'someSUBKEY text'),
+            array('"some" .subkey text"', 'some SUBKEY text'),
+            array('some( .subkey) "te" "x""t"', 'someSUBKEYtext'),
+            array('1 "+" 1 + "=" 2', '1+ 1= 2'),
+            
+            array('1, 2', array(1, 2)),
+            array('one, two, three four', array('one', 'two', 'three four')),
+            array('one, two, (three, four)', array('one', 'two', array('three', 'four'))),
+            array('one two (three, four) five six (seven) (eight, nine)', array('one two', array('three', 'four'), 'five six seven', array('eight', 'nine'))),
+            array('zero (one, two) three four (five, six) seven eight', array(
+                'zero', array('one', 'two'), 'three four', array('five', 'six'), 'seven eight')
+            ),
+            array('(one, two), three four (five, six) seven eight', array(
+                array('one', 'two'), 'three four', array('five', 'six'), 'seven eight')
+            ),
+            
+            array('1, two:2', array(1, 'two' => 2)),
+            array('1 2, 3, four:4, five:5 (six:6) four:FOUR', array(
+                '1 2', 3, 'four' => 'FOUR', 'five' => 5, array('six' => 6)
+                )),
+            array('(@time.year):"Now!"', array(intval(strftime('%Y')) => 'Now!')),
+            array('year @time.year:"Now!"', array('year', intval(strftime('%Y')) => 'Now!')), // unsecured whitespace!
+            array('(year @time.year):"Now!"', array(strftime('year %Y') => 'Now!')), // now it's ok!            
+            
+//            array('.myMethod()' - calls myMethod()
+//            array('.myMethod(1, 2, 3)' - calls myMethod(1, 2, 3)
+//            array('.myMethod((1, 2, 3), 4)' - calls myMethod(array(1, 2, 3), 4)
+//            array('@typecast()' - calls typecast(array(value))
+//            array('@typecast(1, 2, 3)' - calls typecast(array(1, 2, 3))
+//            array('@typecast(., 1, 2, 3)' - calls typecast(array(value, 1, 2, 3))
+//            array('.subkey@typecast()' - calls typecast(array(valuearray('subkey')))
+//            array('.subkey@typecast(.)' - calls typecast(array(value))
+//            array('@typecast(.subkey)' - calls typecast(array(valuearray('subkey')))
+//            array('@typecast' - calls typecast()            
+            
+            array('1  +  1', 2),
+            array('1+(2*2)', 5),
+            array('1+2*2', 6),
+            array('5+(5+(2*2.5))+5*4', 80),
+            
+            array('1 = 1'),
+            array('1 < 2'),
+            array('2 >= 2'),
+            
+            array('1  +  1 = 2'),
+            array('1+(2*2) = 5'),
+            array('1+2*2 = 6'),
+            array('5+(5+(2*2.5))+5*4 = 80'),
+          
+            // escaping
+            
+            // bad syntax
+            
+            // and/or breaking
+            
+        );
+        $result = array();
+        foreach($array as $item) $result[$item[0]] = $item;
+        return $result;
+    }     
+    
 
     /**
      * @dataProvider checkArrayProvider
@@ -111,52 +248,9 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             
             'check' => array(true, array('foo' => array('$check' => function($v) {return $v == 'bar';}))),
                     
-                    
-            'shorthand-escape' => array(true, '$ $something', null, '$something'),
-            'shorthand-none' => array(true, '$something', null, '$something'),
-            'shorthand-regex' => array(true, '$.foo $regex /bar/'),
-            'shorthand-gt' => array(false, '$.number $gt 1'),
-            'shorthand-gte' => array(true, '$.number $>= 1'),
-                    
-                    
         );
     }
 
-    
-    /**
-     * @dataProvider checkOperatorsProvider
-     */
-    public function testCheckOperators( $expected, $data, $rules ) {
-        if (is_string($expected)) $this->setExpectedException($expected);
-        $chequer = $this->buildChequer($rules);
-        $this->assertEquals($expected, $chequer->check($data));
-    }
-
-    
-    public function checkOperatorsProvider() {
-        return array(
-            'true' => array(true, 1, '1'),
-            'false' => array(false, 1, 'blah'),
-            'not-false' => array(false, 1, '$not 1'),
-            'not-true' => array(true, 1, '$not blah'),
-            
-            'eq-true' => array(true, 1, array('$eq' => 1)),
-            'eq-true2' => array(true, 1, array('$eq' => '1')),
-            'eq-true3' => array(true, 1, array('$eq' => '01')),
-            'same-true' => array(true, 1, array('$same' => 1)),
-            'same-false' => array(false, 1, array('$same' => '1')),
-            'same-short-false' => array(false, 1, '$== 1'),
-            
-            'cmp3' => array(true, array('one' => 1, 'two' => 2), '$cmp .two > .one'),
-            // checks if size of the array is 2
-            'cmp2' => array(true, array('one' => 1, 'two' => 2), '$cmp size .two'),
-            'cmp2-dollar' => array(true, array('one' => 1, 'two' => 2), '$cmp $size .two'),
-            // checks if array(1,2) contains value 2
-            'cmp-dollar' => array(true, array(1, 2), '$cmp .1'),
-            // checks if array(1,2) equals itself
-            'cmp-dollar' => array(true, array(1, 2), '$cmp .'),
-            );
-    }    
 
     
     /**
@@ -238,34 +332,17 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
         $this->assertTrue($chequer->check('foo'));
         $this->assertTrue($chequer->check('bar'));
         $this->assertFalse($chequer->check('hello!'));
+
+        $chequer->setQuery('$rule "foo !bar"');
+        $this->assertTrue($chequer->check('foo'));
+        $this->assertFalse($chequer->check('foobar'));
         
         $this->setExpectedException('Exception');
         $chequer->setQuery('$rule missing');
         $this->assertTrue($chequer->check('foobar'));
     }    
 
-    
-    /**
-     * @dataProvider checkParserProvider
-     */
-    public function testCheckParser( $rule, $data = 1, $expected = true ) {
-        if (is_string($expected)) $this->setExpectedException($expected);
-        $chequer = $this->buildChequer($rule);
-        $this->assertEquals($expected, $chequer->check($data));
-    }
-
-    
-    public function checkParserProvider() {
-        $array = array(
-            array('$ 1  +  1 = 2'),
-            array('$ 1+1=2'),
-            array('$ 1+(2*2) = 5'),
-            array('$ 1+2*2 = 6'),
-        );
-        $result = array();
-        foreach($array as $item) $result[$item[0]] = $item;
-        return $result;
-    }    
+   
     
     
 }

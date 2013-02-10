@@ -206,6 +206,16 @@ namespace {
             return $ch->check($value);
         }
 
+        
+        /** Creates Chequer instance with query in shorthand syntax. This way you don't have to prepend it with '$ '.
+         * @param $query Any non-string query will be queried traditionally. 
+         * @return Chequer
+         *  */
+        public static function shorthand($value, $query, $matchAll = null) {
+            if (is_string($query) && $query && $query{0} !== '$') $query = '$ ' . $query;
+            return new static($value, $query, $matchAll = null);
+        }
+        
 
         public function __invoke( $value ) {
             return $this->check($value);
@@ -220,6 +230,20 @@ namespace {
             return $this->query($value, $this->query, $matchAll === null ? $this->matchAll : $matchAll);
         }
 
+        
+        /** Checks the value against provided shorthand query.
+         * @param $query Any non-string query will be queried traditionally. You don't have to prepend it with '$ '
+         *  */
+        public function shorthandQuery($value, $query) {
+            if (is_string($query) && ($length = strlen($query)) > 0) {
+                // remove '$ '
+                if ($length > 2 && $query{0} === '$' && $query{1} === ' ') $query = substr($query, 2);
+                return $this->shorthandQueryRun($value, $query);
+            } else {
+                return $this->query($value, $query);
+            }
+        }
+        
 
         /** Checks the value against provided query
          * 
@@ -242,7 +266,7 @@ namespace {
                     }
                     // make '$ $op...' into '$op...'
                     if ($query[1] === ' ') $query = substr($query, 2);
-                    return $this->shorthandQuery($value, $query);
+                    return $this->shorthandQueryRun($value, $query);
                 } elseif (is_array($value) && is_bool($query) == false) {
                     // string/number queries are searched in arrays
                     return in_array($query, $value);
@@ -269,7 +293,7 @@ namespace {
                         if ($key === '$') {
                             $matchAll = ($rule === 'OR' || $rule === 'or') ? false : $rule == true;
                         } elseif ($key{1} === ' ') {
-                            $result = $this->query($this->shorthandQuery($value, substr($key, 2)), $rule);
+                            $result = $this->query($this->shorthandQueryRun($value, substr($key, 2)), $rule);
                         } else {
                             $result = $this->chequerOperator(substr($key, 1), $value, $rule);
                         }
@@ -361,7 +385,7 @@ namespace {
         protected function querySubkey( $value, $key, $rule, $deepArrays = 0 ) {
             if ($key[0] === '.' || $key[0] === '@') {
                 // handle complex subkeys
-                $value = $this->shorthandQuery($value, $key);
+                $value = $this->shorthandQueryRun($value, $key);
             } else {
                 // handle simple ones
                 $value = $this->getSubkeyValue($value, $key, $deepArrays);
@@ -370,7 +394,7 @@ namespace {
         }
 
         
-        protected function shorthandQuery($value, $query) {
+        protected function shorthandQueryRun($value, $query) {
             // split query into tokens
             $tokens = new \Chequer\Tokenizer($query, '/\$[a-z!~&^*\-+=\/|%<>]+|[!~&\^*\-+=\/|%<>]{1,3}|(?<!\.)\d+\.\d+|\d+|[a-z]+|\s+|./i');
             return $this->shorthandParse($tokens, $value);
@@ -394,11 +418,14 @@ namespace {
         
         /** Collects the value from tokens. Stops only on operators or EOT. */
         protected function shorthandCollectValues(\Chequer\Tokenizer $tokens, $contextValue, &$value) {
+            // was anything collected?
             $collected = false;
+            // was anything collected for current array item?
             $collectedItem = false;
-            $collectedKey = null;
+            // value to concatenate on
+            $collectingValue =& $value;
             $whitespace = '';
-            do {
+            while ($tokens->current !== null && $tokens->current !== ')') {
                 $char = $tokens->current[0];
                 $valueItem = null;
                 if ($char === '(') {
@@ -416,15 +443,20 @@ namespace {
                 } elseif ($char === '"' || $char === '\'') {
                     // quoted string
                     $whitespace = '';
-                    $valueItem = substr($tokens->getToken(array($char => true)), 1, -1);
-                    continue;
+                    $valueItem = substr($tokens->getToken(array($char => true)), 1);
+                    // read outstanding quote
+                    $tokens->getToken();
                 } elseif ($char === ',') {
                     // make it into an array
                     if (!is_array($value)) {
                         $value = $collected ? array($value) : array();
                     }
-                    $collectedKey = count($value);
+                    $value[count($value)] = null;
+                    $whitespace = '';
+                    $collectingValue =& $value[count($value)-1];
                     $collectedItem = false;
+                    $tokens->getToken();
+                    continue;
                 } elseif ($char === '.' || $char === '@') {
                     // subkeys!
                     $subkeyValue = $contextValue;
@@ -488,38 +520,55 @@ namespace {
                 
                 if ($tokens->current === ':') {
                     // key
+                    $tokens->getToken();
                     $whitespace = '';
-                    $collectedKey = $valueItem;
                     $collectedItem = false;
                     if (!is_array($value)) {
                         $value = $collected ? array($value) : array();
                     }
+                    $value[$valueItem] = null;
+                    $collectingValue =& $value[$valueItem];
+                    continue;
                 } else {
                     // collect the value
-                    if (is_array($value)) {
-                        $value[$collectedKey === null ? count($value)-1 : $collectedKey] = $collectedItem ? $whitespace . $valueItem : $valueItem;
+                    if (is_array($valueItem)) {
+                        if (is_array($collectingValue)) {
+                            $collectingValue[] = $valueItem;
+                        } else {
+                            $collectingValue = $collectedItem ? array($collectingValue, $valueItem) : $valueItem;
+                        }
                     } else {
-                        $value = $collected ? $whitespace . $valueItem : $valueItem;
+                        if (is_array($collectingValue)) {
+                            // add new item and collect from there...
+                            $collectingValue[count($collectingValue)] = null;
+                            $whitespace = '';
+                            $collectingValue =& $collectingValue[count($collectingValue)-1];
+                            $collectedItem = false;
+                        }
+                        $collectingValue = $collectedItem ? $collectingValue . $whitespace . $valueItem : $valueItem;
                     }
                     $collected = true;
                     $collectedItem = true;
-                    $collectedKey = null;
                 }
                 $whitespace = '';
                 
-            } while ($tokens->current !== null && $tokens->current !== ')');
+            };
             return $collected;
         }
         
         protected function shorthandParse(\Chequer\Tokenizer $tokens, $contextValue) {
             try {
                 $value = null;
-                do {
+                $hasResult = false;
+                while ($tokens->current !== null && $tokens->current !== ')') {
                     $operator = null;
                     $parameter = null;
                     // collect the values
-                    if (!$this->shorthandCollectValues($tokens, $contextValue, $value))
-                            $value = $contextValue;
+                    if (!$this->shorthandCollectValues($tokens, $contextValue, $value) 
+                            && !$hasResult
+                    ) {
+                        $value = $contextValue;
+                    }
                     // return on EOT or parenthesis close...
                     if ($tokens->current === null || $tokens->current === ')') {
                         // read ')'
@@ -529,7 +578,7 @@ namespace {
                     // we have an operator for sure. 
                     if ($tokens->current[0] !== '$') {
                         // shorthand syntax, read as is
-                        $tokens->getToken();
+                        $operator = $tokens->getToken();
                     } else {
                         // full syntax, Read until whitespace
                         $operator = $tokens->getToken(self::$shcStopchar);
@@ -542,7 +591,8 @@ namespace {
                         }
                     }
                     $value = $this->chequerOperator($operator, $value, $parameter);
-                } while ($tokens->current !== null && $tokens->current !== ')');
+                    $hasResult = true;
+                };
                 // read ')'
                 $tokens->getToken();
                     
@@ -690,7 +740,7 @@ namespace {
         }        
 
         protected function operator_rule( $value, $rules ) {
-            if (!is_array($rules)) $rules = preg_split('/ *,? +/', $rules);
+            if (!is_array($rules)) $rules = preg_split('/\s*,?\s+/', trim($rules));
 
             if (count($rules) > 1) {
                 $query = array('$' => 'AND');
@@ -700,8 +750,11 @@ namespace {
                     } elseif ($rule === 'OR') {
                         $query['$'] = 'OR';
                     } else {
+                        if (($not = ($rule{0} === '!'))) {
+                            $rule = substr($not, 1);
+                        }
                         if (!isset($this->rules[$rule])) throw new \Chequer\ParseException("Rule '$rule' is undefined!");
-                        $query[] = $this->rules[$rule];
+                        $query[] = $not ? ['$not' => $this->rules[$rule]] : $this->rules[$rule];
                     }
                 }
                 return $this->query($value, $query);
@@ -709,12 +762,10 @@ namespace {
                 if (!isset($this->rules[$rules[0]])) throw new \Chequer\ParseException("Rule '{$rules[0]}' is undefined!");
                 return $this->query($value, $this->rules[$rules[0]]);
             }
-
-            return $this->query($value, $this->rules[$rules]);
         }    
 
         protected function operator_add( $value, $operand ) {
-            if (is_numeric($operand) && is_numeric($operand)) {
+            if (is_numeric($value) && is_numeric($operand)) {
                 return $value + $operand;
             }
             if (is_array($operand)) {
@@ -729,7 +780,7 @@ namespace {
         
 
         protected function operator_sub( $value, $operand ) {
-            if (is_numeric($operand) && is_numeric($operand)) {
+            if (is_numeric($value) && is_numeric($operand)) {
                 return $value - $operand;
             }
             if (is_array($operand)) {
@@ -742,11 +793,23 @@ namespace {
         }        
         
         protected function operator_mult( $value, $operand ) {
-            return $value * $operand;
+            if (is_numeric($value) && is_numeric($operand)) {
+                return $value * $operand;
+            }
+            if ($this->strictMode) 
+                throw new \Chequer\ParseException("Bad operand types for *");
+            else 
+                return null;
         }        
         
         protected function operator_div( $value, $operand ) {
-            return $value / $operand;
+            if (is_numeric($value) && is_numeric($operand)) {
+                return $value / $operand;
+            }
+            if ($this->strictMode) 
+                throw new \Chequer\ParseException("Bad operand types for *");
+            else 
+                return null;
         }        
         
     }
@@ -769,12 +832,14 @@ namespace Chequer {
         public $position;
         public $count;
         public $current;
+        public $escaped = false;
         
         public $escapeChar = '\\';
         
         public function __construct($text, $regexp) {
             // split query into tokens
-            preg_match($regexp, $text, $this->tokens);
+            preg_match_all($regexp, $text, $this->tokens);
+            $this->tokens = $this->tokens[0];
             $this->count = count($this->tokens);
             $this->current = $this->tokens[0];
         }
@@ -785,10 +850,15 @@ namespace Chequer {
          * @param $stopOn Hashmap of characters to stop on. array('char' => 1). If FALSE, will fetch only current token.
          */
         public function getToken($stopOn = false) {
-            $token = $this->current;
+            $token = $this->escaped ? null : $this->current;
             while(++$this->position < $this->count) {
-                if (($this->current = $this->tokens[$this->position]) === $this->escapeChar) continue;
-                if (!$stopOn || isset($stopOn[$this->current])) return $token;
+                if (($this->current = $this->tokens[$this->position]) === $this->escapeChar && !$this->escaped) {
+                    $this->escaped = true;
+                    if (!$stopOn) return $token;
+                    continue;
+                } elseif ($this->escaped) {
+                    $this->escaped = false;
+                } elseif (!$stopOn || isset($stopOn[$this->current])) return $token;
                 $token .= $this->current;
             }
             $this->current = null;

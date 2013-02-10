@@ -234,7 +234,7 @@ The rules of shorthand are:
   '$ NULL' = null;
   ```
 * **Whitespace** between values is preserved. It's ignored before first value, after last one
-  and before quoted strings.
+  and *before* quoted strings.
   
   ```php
   '$ some text' = 'some text'
@@ -242,9 +242,9 @@ The rules of shorthand are:
   '$ some .subkey text' = 'some SUBKEY text'
   '$ some.subkey text' = 'someSUBKEY text'
   '$ some(.subkey) text' = 'someSUBKEY text'
-  '$ "some" .subkey "text"' = 'someSUBKEYtext'
-  '$ "some" .subkey "text"' = 'someSUBKEYtext'
-  '$ 1 "+" 1 = "2"' = '1+1 =2'
+  '$ "some" .subkey text' = 'some SUBKEY text'
+  '$ some( .subkey) "te""xt"' = 'someSUBKEYtext'
+  '$ 1 "+" 1 + "=" 2' = '1+ 1= 2'
   ```
 * If two values follow each other with a comma `,`, they will be put into an **array**:
 
@@ -396,12 +396,18 @@ The currently available operators are:
   allows to reuse predefined rules, which you can set with addRules().
   You can specify many rules as an array, or space delimited string. 
 
-  If you want to match any of the rules, place `OR` as one the rule names:
+  If you want to match any of the rules, place `OR` as one the rule names.
+
+  If you wan't a rule to NOT match, prepend it with '!'
+
   ```php
   $checker->query(..., '$rule email lowercase');
   $checker->query(..., '$rule email AND lowercase'); // this is equivalent to the former
-  $checker->query(..., '$rule email OR lowercase');
+  $checker->query(..., '$rule email OR lowercase'); // email or lowercase
+  $checker->query(..., '$rule "email OR !lowercase"'); // email or not lowercase. We have to quote it because of '!'
   ```
+  
+
 * `$cmp` => [`value1`, `operator`, `value2`] | '`value1` `operator` `value2`'
 
   compares two `values` using the `operator`. Values should be subkeys provided in dot notation.<br/>
