@@ -209,7 +209,12 @@ The rules of shorthand are:
   '$.key' // NOT ok! 
   ```
 * To not use the shorthand, **escape** the first dollar with backslash `\`. `'\\$tring!'`
-* There is __no operator precedence__. Query is evaluated from left to right.
+* There is __no operator precedence__. Query is evaluated from _left_ to _right_.
+  
+  This is __extremely important__ as every operation is done through operators. Including AND/OR constructs.<br/>
+  `$ 1 = 1 && 2 = 2` will evaluate like `$ ((1 = 1) && 2) = 2`<br/>
+  What you would want is rather this: `$ (1 = 1) && (2 = 2)`
+
 * You can **group** operators and values with parentheses `()`.
 * You can **quote** the strings with either single or double quotes. You can escape the quotes
   by using backslash `\`. Both are valid: `'this "is" ok' "this 'is' ok two!"`
@@ -259,6 +264,7 @@ arrays are changed to '(Array)'. This may change, so don't rely on it
 
   ```php
   '$ 1, 2' = [1, 2]
+  '$ (,)' = []
   '$ one, two, three four' = ['one', 'two', 'three four']
   '$ one, two, (three, four)' = ['one', 'two', ['three', 'four']]
   ```
@@ -287,13 +293,22 @@ arrays are changed to '(Array)'. This may change, so don't rely on it
   '$ @typecast' - calls typecast()
   ```
 * The logic behind it, is to collect a `value`, an `operator` and the `parameter`.
-  Afterwards call the operator(value, parameter) and use it's result as the `value` of the next
-  `operator`.
-  * You can skip the `value` - current context's `value` will be used: `$< 10 && > 10` is equivalent 
-    to `$ . < 10 && . > 10`
-  * You can skip the `operator` - the collected values will be the result
+  Afterwards call the `operator`**(** `value`, `parameter` **)** and use it's result as the `value` of the next `operator`.
+
+  * Every query is run under a `context` - which is a `value` you are querying. The `context` stays the same
+    for the whole query, so no matter how deep you are, `.` will give you the `context`.
+  * You can skip the `value` at the beginning of the query, group or array index. `context` will be used as `value`.
+
+    `$< 10` is thus equivalent to `$ . < 10`.<br/>
+    `$ .method( < 10, > 10)` is the same as `$ .method( . < 10, . > 10)`
+  * You can skip the `operator` - the collected `value` will be the result.
   * If there is no `parameter` but another `operator` follows, it's result will be used as the `parameter`:
+
     `'$ $not $regex foo'` will first evaluate `'$regex foo'` and using it's result - `'$not'`.
+
+  Combining all this you can write `$= 10 || (= 20) || (! ~ "/\d/")` which is equivalent 
+    to `$ (. = 10) || (. = 10) || (!(~ "/\d/"))`.
+
 * If the value you are trying to access is missing, it will return null. It holds true even if
   you are trying to access a deep subkey! You can set strict mode to TRUE to throw exceptions instead.
 * Operators may throw `\Chequer\BreakException` - this will exit current level with a return value
@@ -417,35 +432,6 @@ The currently available operators are:
   ```
   
 
-* `$cmp` => [`value1`, `operator`, `value2`] | '`value1` `operator` `value2`'
-
-  compares two `values` using the `operator`. Values should be subkeys provided in dot notation.<br/>
-  Value of `value2` will be passed to operators as-is. This means it can be used as a query!
-  ```php
-  '$cmp .subkey > .anothersubkey'`
-  ```
-
-  Please note, that both values are subkeys! You can use single dot (`.`) to reference current value,
-  or `typecast`s, but you cannot use plain strings! `'$cmp > 20'` will look for 20th element in an
-  array. To compare to arbitrary values use the operator in normal way - `$> 20`. 
-
-  To use the current value, skip the `value1`:
-  ```php
-  ['.subkey' => '$cmp > .anothersubkey']
-  ```
-
-  You can skip the first value and the operator, to use the value of `value2` as a query:
-  ```php
-  // this is equivalent to `Chequer::checkValue('foo', ['foo', 'bar']);`
-  (new Chequer(['$cmp' => '@example']))
-      ->addTypecasts('example' => ['foo', 'bar'])
-      ->check('foo');
-
-  // this is equivalent to `Chequer::checkValue('foo', '$~ .*foo.*');`
-  (new Chequer(['$cmp' => '@example']))
-      ->addTypecasts('example' => ['$regex' => '$~ .*foo.*'])
-      ->check('foo');
-  ```
 * `$eval` => [`$query`, `query`, ...]
 
   Evaluates every query by passing the `result` as the next query's `value`.

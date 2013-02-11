@@ -3,8 +3,13 @@
 require_once __DIR__ . '/../Chequer.php';
 
 class ChequerTest_Object {
-    function test($val = 'test') {
-        return $val;
+    public $property = 'property';
+    
+    function test() {
+        return json_encode(func_get_args());
+    }
+    function __invoke() {
+        return json_encode(func_get_args());
     }
 }
 
@@ -38,7 +43,9 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
 
     /** @return Chequer */
     public function buildChequer( $rules = null, $matchAll = null ) {
-        return new Chequer($rules, $matchAll);
+        $ch = new Chequer($rules, $matchAll);
+        $ch->addTypecast('typecast', new ChequerTest_Object);
+        return $ch;
     }
 
     
@@ -65,17 +72,9 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             'eq-true3' => array(true, 1, array('$eq' => '01')),
             'same-true' => array(true, 1, array('$same' => 1)),
             'same-false' => array(false, 1, array('$same' => '1')),
-            'same-short-false' => array(false, 1, '$== 1'),
-            
-            'cmp3' => array(true, array('one' => 1, 'two' => 2), array('$cmp' => '.two > .one')),
-            // checks if size of the array is 2
-            'cmp2' => array(true, array('one' => 1, 'two' => 2), array('$cmp' => 'size .two')),
-            'cmp2-dollar' => array(true, array('one' => 1, 'two' => 2), array('$cmp' => '$size .two')),
-            // checks if array(1,2) contains value 2
-            'cmp-dollar' => array(true, array(1, 2), array('$cmp' => '.1')),
-            // checks if array(1,2) equals itself
-            'cmp-dollar' => array(true, array(1, 2), array('$cmp' => '.')),
-            );
+            'same-short' => array(true, 1, '$== 1'),
+            'same-short-false' => array(false, '1', '$== 1'),
+        );
     }    
     
     
@@ -85,7 +84,10 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
      * @dataProvider checkShorthandProvider
      */
     public function testCheckShorthand( $query, $expected = true, $value = null ) {
-        if ($expected instanceof Exception) $this->setExpectedException(get_class($expected));
+        if ($expected instanceof Exception) {
+            $this->setExpectedException(get_class($expected));
+            $expected = 'Should throw exception!';
+        }
         if ($value === null) $value = $this->data;
         $chequer = $this->buildChequer();
         $chequer->setStrictMode(true);
@@ -110,6 +112,7 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             array('\'this "is" ok\' " this \'is\' ok two!"', 'this "is" ok this \'is\' ok two!'),
             array('.', 123, 123),
             
+            // concats
             array('some text', 'some text'),
             array('some text  +  more text', 'some textmore text'),
             array('some .subkey text', 'some SUBKEY text'),
@@ -123,50 +126,48 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             array('one, two, three four', array('one', 'two', 'three four')),
             array('one, two, (three, four)', array('one', 'two', array('three', 'four'))),
             array('array is (1, 2, 3) numbers are 1 2 3 false is FALSE true is TRUE null is NULL', 
-                  'array is (Array) numbers are 1 2 3 false is  true is  null is '),
+                  'array is (Array) numbers are 1 2 3 false is  true is 1 null is '),
 
+            // arrays
             array('()', null, null),
             array('(,)', array()),
             array('(,NULL)', array(null)),
             array('1,(1+1),(,1+2)', array(1,2,array(3))),
-            array('1,1+1,(,1+2),1 ! > 2, 1 > 2', array(1,2,array(3), true, false)),
-            
-            
-//            array('one two (three, four) five six (seven) (eight, nine)', array('one two', array('three', 'four'), 'five six seven', array('eight', 'nine'))),
-//            array('zero (one, two) three four (five, six) seven eight', array(
-//                'zero', array('one', 'two'), 'three four', array('five', 'six'), 'seven eight')
-//            ),
-//            array('(one, two), three four (five, six) seven eight', array(
-//                array('one', 'two'), 'three four', array('five', 'six'), 'seven eight')
-//            ),
+            array('1,1+1,(,1+2),(,),1 ! > 2, 1 > 2', array(1,2,array(3),array(), true, false)),
             
             array('1, two:2', array(1, 'two' => 2)),
-            array('1 2, 3, four:4, five:5 (six:6) four:FOUR', array(
-                '1 2', 3, 'four' => 'FOUR', 'five' => 5, array('six' => 6)
+            array('1 2, 3, four:4, five:5, (six:6), four:FOUR', array(
+                '1 2', 3, 'four' => 'FOUR', 'five' => 5, 4 => array('six' => 6)
                 )),
-            array('(@time.year):"Now!"', array(intval(strftime('%Y')) => 'Now!')),
-            array('year @time.year:"Now!"', array('year', intval(strftime('%Y')) => 'Now!')), // unsecured whitespace!
-            array('(year @time.year):"Now!"', array(strftime('year %Y') => 'Now!')), // now it's ok!            
             
-//            array('.myMethod()' - calls myMethod()
-//            array('.myMethod(1, 2, 3)' - calls myMethod(1, 2, 3)
-//            array('.myMethod((1, 2, 3), 4)' - calls myMethod(array(1, 2, 3), 4)
-//            array('@typecast()' - calls typecast(array(value))
-//            array('@typecast(1, 2, 3)' - calls typecast(array(1, 2, 3))
-//            array('@typecast(., 1, 2, 3)' - calls typecast(array(value, 1, 2, 3))
-//            array('.subkey@typecast()' - calls typecast(array(valuearray('subkey')))
-//            array('.subkey@typecast(.)' - calls typecast(array(value))
-//            array('@typecast(.subkey)' - calls typecast(array(valuearray('subkey')))
-//            array('@typecast' - calls typecast()            
+//            array('(@time.year):"Now!"', array(intval(strftime('%Y')) => 'Now!')),
+//            array('year @time.year:"Now!"', array('year', intval(strftime('%Y')) => 'Now!')), // unsecured whitespace!
+//            array('(year @time.year):"Now!"', array(strftime('year %Y') => 'Now!')), // now it's ok!            
             
-            array('1  +  1', 2),
+            array('.object()', '[]'),
+            array('.object(1, 2, 3)', '[1,2,3]'),
+            array('.object((1, 2, 2+1), 2*2)', '[[1,2,3],4]'),
+            array('@typecast()', '["value"]', 'value'),
+            array('@typecast(foo)', '["foo"]'),
+            array('@typecast(1, 2, 3)', '[1,2,3]'),
+            array('@typecast(., 1, 2, 3)', '["value",1,2,3]', 'value'),
+            array('.subkey@typecast()', '["SUBKEY"]'),
+            array('.subkey@typecast(.)', '[{"subkey":"SUBKEY"}]', array('subkey' => 'SUBKEY')),
+            array('@typecast(.subkey)', '["SUBKEY"]'),
+//            array('@typecast', ''), // its hard to tell on this provider...
+            array('@typecast.property', 'property'),
+            
+            array('1 + 1', 2),
             array('1+(2*2)', 5),
             array('1+2*2', 6),
             array('5+(5+(2*2.5))+5*4', 80),
             
             array('1 = 1'),
+            array('1 ! = 1', false),
             array('1 < 2'),
             array('2 >= 2'),
+            array('!(2 = 2)', false),
+            array('2 ! ! = 2', true),
             
             array('1  +  1 = 2'),
             array('1+(2*2) = 5'),
@@ -174,10 +175,20 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             array('5+(5+(2*2.5))+5*4 = 80'),
           
             // escaping
-            
+            array('normal \"test\"\! All \+ characters \(escaped\)', 'normal "test"! All + characters (escaped)'),
             // bad syntax
+            array('(ending it too fast) is) bad!', new Exception()),
             
             // and/or breaking
+            array('= 1 || . = 2 ||( = 3)|| @this_will_throw', true, 3),
+            array('!= 1 && (. != 2) && (!= 3) && @this_will_throw', false, 3),
+            array('$= 10 || (= 20) || (! ~ "/\d/")', true, 20),
+            array('$= 10 || (= 20) || (! ~ "/\d/")', true, 'foo'),
+            array('$ (. = 10) || (. = 10) || (!(~ "/\d/"))', true, 20),
+            array('$ (. = 10) || (. = 10) || (!(~ "/\d/"))', true, 'foo'),
+            // fast forward test
+            array('1 + ( FALSE && TRUE && (this + (should "(not" be even "called!)" )) ) + 1', 2),
+            
             
         );
         $result = array();
@@ -210,7 +221,7 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             'hashmap_missing' => array(false, array('missing' => true)),
             'hashmap_missing-true' => array(true, array('missing' => null)),
             'hashmap_missing-false' => array(false, array('missing' => false)),
-            'hashmap_missing-array' => array('Exception', array('missing' => array('some' => 'test'))),
+            'hashmap_missing-array' => array(false, array('missing' => array('some' => 'test'))),
             'hashmap_exists' => array(true, array('foo' => true)),
             'hashmap_sub-true' => array(true, array('hashmap' => array('one' => 'ONE'))),
             'hashmap_sub-false' => array(false, array('hashmap' => array('missing' => 1))),
@@ -267,7 +278,10 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
      * @dataProvider checkTypecastsProvider
      */
     public function testCheckTypecasts( $expected, $data, $typecasts, $rules ) {
-        if (is_string($expected)) $this->setExpectedException($expected);
+        if ($expected instanceof Exception) {
+            $this->setExpectedException(get_class($expected));
+            $expected = 'Should throw exception!';
+        }
         $chequer = $this->buildChequer($rules);
         $chequer->addTypecasts($typecasts);
         $this->assertEquals($expected, $chequer->check($data));
@@ -278,19 +292,19 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
         $closure = function($a = null) {return $a . 'bar';};
         $closureArray = function($a = null) {return array('foo' => 'bar', 'bar' => $a);};
         return array(
-            'value' => array(true, false, array('test' => 'foo'), '$.@test foo'),
-            'notcallable' => array('Exception', false, array('test' => 'foo'), '$.@test() foo'),
-            'closure-use' => array(true, 'foo', array('test' => $closure), '$.@test bar'),
-            'closure-typecast' => array(true, 'foo', array('test' => $closure), '$.@test() foobar'),
+            'value' => array('foo', false, array('test' => 'foo'), '$ @test'),
+            'notcallable' => array(new Exception, false, array('test' => 'foo'), '$ @test()'),
+            'closure-use' => array('bar', 'foo', array('test' => $closure), '$ @test'),
+            'closure-typecast' => array(true, 'foo', array('test' => $closure), '$ .@test() = foobar'),
             'closurearray-use' => array(true, 
                     'foo', 
                     array('test' => $closureArray), 
-                    array('$' => 'AND', '$.@test.foo bar', array('.@test.bar' => null))
+                    array('$' => 'AND', '$ @test.foo = bar', array('@test.bar' => null))
                 ),
             'closurearray-typecast' => array(true, 
                     'foo', 
                     array('test' => $closureArray), 
-                    array('$' => 'AND', '$.@test().foo bar', '$.@test().bar foo')
+                    array('$' => 'AND', '$ @test().foo = bar', '$ @test().bar = foo')
                 ),
             );
     }    
