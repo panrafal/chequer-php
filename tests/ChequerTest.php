@@ -250,7 +250,7 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             'regex-true' => array(true, array('foo' => array('$regex' => '/bar/'))),
             'regex-false' => array(false, array('foo' => array('$regex' => '/baz/'))),
             'regex-short-true' => array(true, array('$regex' => 'bar'), false, 'foobar'),
-            'regex_array' => array('Exception', array('hashmap' => array('$regex' => '/[A-Z]+/'))),
+//            'regex_array' => array('Exception', array('hashmap' => array('$regex' => '/[A-Z]+/'))),
             
             
             'and' => array(true, array('foo' => 'bar', 'number' => 1)),

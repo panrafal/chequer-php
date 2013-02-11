@@ -644,16 +644,37 @@ namespace {
         
         /* ---------- operators ------------------------------------------------- */
 
+        protected static function toString($a, $serialize = true) {
+            if (is_object($a) && method_exists($a, '__toString')) {
+                return (string)$a;
+            } elseif ($serialize && (is_object($a) || is_array($a))) {
+                return serialize($a);
+            }
+            return (string)$a;
+        }
+        
+        protected static function unifyTypes(&$a, &$b) {
+            if (is_scalar($a) && !is_scalar($b)) {
+                $b = self::toString($b);
+            } elseif (!is_scalar($a) && is_scalar($b)) {
+                $a = self::toString($a);
+            } elseif (!is_scalar($a) && !is_scalar($b) && gettype($a) != gettype($b)) {
+                $a = self::toString($a);
+                $b = self::toString($b);
+            }
+        }
+        
         protected function operator_not( $value, $rule ) {
             return !$this->query($value, $rule);
         }
 
-
         protected function operator_eq( $value, $rule ) {
+            self::unifyTypes($value, $rule);
             return $value == $rule;
         }
         
         protected function operator_ne( $value, $rule ) {
+            self::unifyTypes($value, $rule);
             return $value != $rule;
         }
 
@@ -663,26 +684,32 @@ namespace {
 
 
         protected function operator_nc( $value, $rule ) {
+            $value = self::toString($value);
+            $rule = self::toString($rule);
             return mb_strtolower($value) === mb_strtolower($rule);
         }
 
 
         protected function operator_gt( $value, $rule ) {
+            self::unifyTypes($value, $rule);
             return $value > $rule;
         }
 
 
         protected function operator_gte( $value, $rule ) {
+            self::unifyTypes($value, $rule);
             return $value >= $rule;
         }
 
 
         protected function operator_lt( $value, $rule ) {
+            self::unifyTypes($value, $rule);
             return $value < $rule;
         }
 
 
         protected function operator_lte( $value, $rule ) {
+            self::unifyTypes($value, $rule);
             return $value <= $rule;
         }
 
@@ -690,6 +717,8 @@ namespace {
         protected function operator_between( $value, $rule ) {
             if (count($rule) != 2)
                     throw new Chequer\ParseException('Two element array required for $between!');
+            self::unifyTypes($value, $rule[0]);
+            self::unifyTypes($value, $rule[1]);
             return $value >= $rule[0] && $value <= $rule[1];
         }
 
@@ -725,8 +754,7 @@ namespace {
 
 
         protected function operator_regex( $value, $rule ) {
-            if (!is_scalar($value) && !method_exists($value, '__toString'))
-                    throw new \Chequer\ParseException('String required for regex matching.');
+            $value = self::toString($value);
             if ($rule[0] !== '/' && $rule[0] !== '#' && $rule[0] !== '~') {
                 $rule = "~{$rule}~";
             }
@@ -821,7 +849,7 @@ namespace {
                 return $value / $operand;
             }
             if ($this->strictMode) 
-                throw new \Chequer\ParseException("Bad operand types for *");
+                throw new \Chequer\ParseException("Bad operand types for /");
             else 
                 return null;
         }        
