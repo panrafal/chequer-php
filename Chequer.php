@@ -38,7 +38,7 @@ namespace {
         protected $shorthandSyntax = true;
         protected $strictMode = false;
 
-        protected $operators = array(
+        static protected $globalOperators = array(
             '=' => 'eq',
             '==' => 'same',
             '>' => 'gt',
@@ -57,6 +57,11 @@ namespace {
             'rules' => 'rule',
         );
         
+        static protected $globalTypecasts = array();
+        static protected $globalRules = array();
+        
+        protected $operators;
+        
         protected $specialChars = '$.@';
 
         protected $typecasts = array();
@@ -72,6 +77,10 @@ namespace {
             $this->query = $query;
             $this->matchAll = $matchAll;
             $this->deepArrays = $deepArrays;
+            $this->operators = self::$globalOperators;
+            $this->typecasts = self::$globalTypecasts;
+            $this->rules = self::$globalRules;
+                    
         }
 
 
@@ -181,7 +190,30 @@ namespace {
             return $this->rules;
         }
 
+        public static function addGlobalOperators($operators) {
+            self::$globalOperators = array_merge(self::$globalOperators, $operators);
+        }
 
+        public static function getGlobalOperators() {
+            return self::$globalOperators;
+        }
+
+        public static function addGlobalTypecasts($typecasts) {
+            self::$globalTypecasts = array_merge(self::$globalTypecasts, $typecasts);
+        }
+
+        public static function getGlobalTypecasts() {
+            return self::$globalTypecasts;
+        }
+
+        public static function addGlobalRules($rules) {
+            self::$globalRules = array_merge(self::$globalRules, $rules);
+        }
+
+        public static function getGlobalRules() {
+            return self::$globalRules;
+        }
+        
         /** Checks rules against current server environment. 
          * Available keys are everything from $_SERVER, _ENV, _COOKIE, _SESSION, _GET, _POST, _REQUEST.
          * 
