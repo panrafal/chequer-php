@@ -11,7 +11,17 @@
 
 namespace Chequer;
 
+use DynamicObject;
+use SplFileInfo;
+use SplFileObject;
+
 /** File information.
+ * 
+ * You can use a filepath string, SplFileInfo object, or any object whose __toString() will
+ * will return the filepath.
+ * 
+ * All properties and methods of the passed object are still accessible. If you don't pass an
+ * object, but a string - SplFileinfo methods will be accessible.
  * 
  * @property-read int $size File size in bytes
  * @property-read Time $atime Access time
@@ -33,9 +43,9 @@ namespace Chequer;
  * @property-read boolean $readable
  * @property-read boolean $executable
  * 
- * @method \SplFileObject openFile ($open_mode = r, $use_include_path = false , $context = NULL )
+ * @method SplFileObject openFile ($open_mode = r, $use_include_path = false , $context = NULL )
  */
-class File extends DynamicChequerObject {
+class File extends DynamicObject {
 
     protected $filepath;
     
@@ -70,23 +80,31 @@ class File extends DynamicChequerObject {
         '__toString' => 'get_path',
     );
     
-    function __construct($object) {
-        if (is_string($object)) {
-            $this->filepath = $object;
-        } elseif ($object instanceof \SplFileInfo) {
-            /* @var $object \SplFileInfo */
-            $this->filepath = $object->getPathname();
+
+    /** @return File */
+    public static function create($file) {
+        if ($file instanceof File) return $file;
+        return new File($file);
+    }
+    
+    
+    function __construct($file) {
+        if (is_string($file)) {
+            $this->filepath = $file;
+        } elseif ($file instanceof SplFileInfo) {
+            /* @var $file SplFileInfo */
+            $this->filepath = $file->getPathname();
         } else {
             // maybe the __toString() will give us the path?
-            $this->filepath = (string)$object;
+            $this->filepath = (string)$file;
         }
-        parent::__construct($object);
+        parent::__construct($file);
     }
 
     public function __call( $name, $arguments ) {
         // instantiate SplFileInfo only when it's needed
         if ($this->__parent === null) {
-            $this->__parent = new \SplFileInfo($this->filepath);
+            $this->__parent = new SplFileInfo($this->filepath);
         }
         return parent::__call($name, $arguments);
     }
@@ -115,7 +133,7 @@ class File extends DynamicChequerObject {
     }
 
     public function get_extension() {
-        if ($this->__parent instanceof \SplFileInfo) return $this->__parent->getExtension();
+        if ($this->__parent instanceof SplFileInfo) return $this->__parent->getExtension();
         return pathinfo($this->filepath, PATHINFO_EXTENSION);
     }
 

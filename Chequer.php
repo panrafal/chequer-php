@@ -853,6 +853,20 @@ namespace {
             else 
                 return null;
         }        
+ 
+        
+        
+        // -------------------------- Typecasts --------------------------
+        
+        protected function typecast_file($callArgs) {
+            if (!$callArgs) $callArgs = array(getcwd());
+            return call_user_func_array(array('Chequer\File', 'create'), $callArgs);
+        }
+        
+        protected function typecast_time($callArgs) {
+            return call_user_func_array(array('Chequer\Time', 'create'), $callArgs);
+        }
+        
         
     }
 }

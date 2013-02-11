@@ -14,12 +14,20 @@ namespace Chequer;
 class DynamicChequerObject extends \DynamicObject implements Chequerable {
 
     public function chequerOperator($operator, $value, $rule, $caller) {
-        
+        if ($this->_isCallable('operator_' . $operator)) {
+            return $this->{'operator_' . $operator}($operator, $value, $rule, $caller);
+        }
+        /* @var $caller Chequerable */
+        return $caller->chequerOperator($operator, $value, $rule, $caller);
     }
 
 
     public function chequerTypecast($typecast, $callArgs, $caller) {
-        
+        if ($this->_isCallable('typecast_' . $typecast)) {
+            return $this->{'typecast_' . $typecast}($typecast, $callArgs, $caller);
+        }
+        /* @var $caller Chequerable */
+        return $caller->chequerTypecast($typecast, $callArgs, $caller);
     }
 
 
