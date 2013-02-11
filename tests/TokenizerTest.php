@@ -2,10 +2,6 @@
 
 require_once __DIR__ . '/../Chequer.php';
 
-class ChequerTest_Object {
-    
-}
-
 class TokenizerTest extends PHPUnit_Framework_TestCase {
 
     protected $tokenizer;
