@@ -31,13 +31,37 @@ class Time extends DynamicChequerObject {
     protected $unix;
     
     /** Getters are predeclared for speed. To override them use setGetter().
+     * 
+     * @property-read string $date
+     * @property-read string $time
+     * @property-read int $year
+     * @property-read int $month 
+     * @property-read int $day
+     * @property-read int $week
+     * @property-read int $weekday
+     * @property-read int $hour
+     * @property-read int $minute
+     * @property-read int $second
+     * @property-read int $unixtime
      */
     protected $__getters = array(
-        'size' => 'get_size',
+        'date' => 'get_date',
+        'day' => 'get_day',
+        'hour' => 'get_hour',
+        'minute' => 'get_minute',
+        'month ' => 'get_month ',
+        'second' => 'get_second',
+        'time' => 'get_time',
+        'unixtime' => 'get_unixtime',
+        'week' => 'get_week',
+        'weekday' => 'get_weekday',
+        'year' => 'get_year',
     );
 
     protected $__methods = array(
         '__toString' => 'strftime',
+        'strftime' => 'get_strftime',
+        'format' => 'get_format',
     );
     
     public static function anythingToTime($time = 'now', $now = null) {
@@ -103,6 +127,7 @@ class Time extends DynamicChequerObject {
         $rule = self::create($rule);
         return new Time($value->unix - $value->unix);
     }    
+
     
     public function get_unixtime() {
         return $this->unix;
