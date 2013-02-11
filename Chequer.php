@@ -433,8 +433,8 @@ namespace {
                     $tokens->getToken();
                     // evaluate
                     $valueItem = $this->shorthandParse($tokens, $contextValue);
-                } elseif (isset(self::$shcOperator[$char])) {
-                    // an operator
+                } elseif (isset(self::$shcOperator[$char]) || $char === ',' || $char === ':') {
+                    // an operator, array or hashmap
                     return $collected;
                 } elseif (isset(self::$shcWhitespace[$char])) {
                     // a whitespace
@@ -446,17 +446,6 @@ namespace {
                     $valueItem = substr($tokens->getToken(array($char => true)), 1);
                     // read outstanding quote
                     $tokens->getToken();
-                } elseif ($char === ',') {
-                    // make it into an array
-                    if (!is_array($value)) {
-                        $value = $collected ? array($value) : array();
-                    }
-                    $value[count($value)] = null;
-                    $whitespace = '';
-                    $collectingValue =& $value[count($value)-1];
-                    $collectedItem = false;
-                    $tokens->getToken();
-                    continue;
                 } elseif ($char === '.' || $char === '@') {
                     // subkeys!
                     $subkeyValue = $contextValue;
@@ -504,7 +493,7 @@ namespace {
                         
                     $valueItem = $subkeyValue;
                     
-                } elseif ($tokens->current !== ':') {
+                } else {
                     // the rest is a string/number/bool/null
                     $valueItem = $tokens->getToken();
                     if (is_numeric($valueItem)) {
@@ -518,81 +507,83 @@ namespace {
                     }
                 }
                 
-                if ($tokens->current === ':') {
-                    // key
-                    $tokens->getToken();
-                    $whitespace = '';
-                    $collectedItem = false;
-                    if (!is_array($value)) {
-                        $value = $collected ? array($value) : array();
-                    }
-                    $value[$valueItem] = null;
-                    $collectingValue =& $value[$valueItem];
-                    continue;
-                } else {
-                    // collect the value
-                    if (is_array($valueItem)) {
-                        if (is_array($collectingValue)) {
-                            $collectingValue[] = $valueItem;
-                        } else {
-                            $collectingValue = $collectedItem ? array($collectingValue, $valueItem) : $valueItem;
-                        }
+                // collect the value
+                if (is_array($valueItem)) {
+                    if (is_array($collectingValue)) {
+                        $collectingValue[] = $valueItem;
                     } else {
-                        if (is_array($collectingValue)) {
-                            // add new item and collect from there...
-                            $collectingValue[count($collectingValue)] = null;
-                            $whitespace = '';
-                            $collectingValue =& $collectingValue[count($collectingValue)-1];
-                            $collectedItem = false;
-                        }
-                        $collectingValue = $collectedItem ? $collectingValue . $whitespace . $valueItem : $valueItem;
+                        $collectingValue = $collectedItem ? array($collectingValue, $valueItem) : $valueItem;
                     }
-                    $collected = true;
-                    $collectedItem = true;
+                } else {
+                    if (is_array($collectingValue)) {
+                        // add new item and collect from there...
+                        $collectingValue[count($collectingValue)] = null;
+                        $whitespace = '';
+                        $collectingValue =& $collectingValue[count($collectingValue)-1];
+                        $collectedItem = false;
+                    }
+                    $collectingValue = $collectedItem ? $collectingValue . $whitespace . $valueItem : $valueItem;
                 }
+                
+                $collected = true;
+                $collectedItem = true;
                 $whitespace = '';
                 
             };
             return $collected;
         }
         
-        protected function shorthandParse(\Chequer\Tokenizer $tokens, $contextValue) {
+        protected function shorthandParse(\Chequer\Tokenizer $tokens, $contextValue, $arrayKey = null) {
             try {
                 $value = null;
+                $arrayValue = null;
                 $hasResult = false;
                 while ($tokens->current !== null && $tokens->current !== ')') {
                     $operator = null;
                     $parameter = null;
                     // collect the values
-                    if (!$this->shorthandCollectValues($tokens, $contextValue, $value) 
-                            && !$hasResult
+                    if (!$hasResult 
+                            && !($value = null) // reset value
+                            && !$this->shorthandCollectValues($tokens, $contextValue, $value)
                     ) {
                         $value = $contextValue;
+                        $hasResult = true;
                     }
                     // return on EOT or parenthesis close...
                     if ($tokens->current === null || $tokens->current === ')') {
                         // read ')'
                         $tokens->getToken();
-                        return $value;
-                    }
-                    // we have an operator for sure. 
-                    if ($tokens->current[0] !== '$') {
-                        // shorthand syntax, read as is
-                        $operator = $tokens->getToken();
+                        break;
+                    } elseif ($tokens->current === ',') {
+                        if ($arrayKey === null) {
+                            $arrayValue = $hasResult ? array($value) : array();
+                        } else $arrayValue[$arrayKey] = $value;
+                        $arrayValue[$arrayKey === null ? 0 : $arrayKey] = $value;
+                        $arrayKey = count($arrayValue);
+                        $hasResult = false;
+                    } elseif ($tokens->current === ':') {
+                        $arrayKey = (string)$value;
+                        $hasResult = false;
                     } else {
-                        // full syntax, Read until whitespace
-                        $operator = $tokens->getToken(self::$shcStopchar);
-                    }
-                    // collect the parameters
-                    if (!$this->shorthandCollectValues($tokens, $contextValue, $parameter)) {
-                        // another operator?
-                        if ($tokens->current !== null && $tokens->current !== ')') {
-                            $parameter = $this->shorthandParse($tokens, $contextValue);
+                        // we have an operator for sure. 
+                        if ($tokens->current[0] !== '$') {
+                            // shorthand syntax, read as is
+                            $operator = $tokens->getToken();
+                        } else {
+                            // full syntax, Read until whitespace
+                            $operator = $tokens->getToken(self::$shcStopchar);
                         }
+                        // collect the parameters
+                        if (!$this->shorthandCollectValues($tokens, $contextValue, $parameter)) {
+                            // another operator?
+                            if ($tokens->current !== null && $tokens->current !== ')') {
+                                $parameter = $this->shorthandParse($tokens, $contextValue);
+                            }
+                        }
+                        $value = $this->chequerOperator($operator, $value, $parameter);
+                        $hasResult = true;
                     }
-                    $value = $this->chequerOperator($operator, $value, $parameter);
-                    $hasResult = true;
-                };
+                }; // while tokens last
                 // read ')'
                 $tokens->getToken();
                     
@@ -600,7 +591,7 @@ namespace {
                 $this->shorthandFastforward($tokens, array(')' => true));
                 return $e->result;
             }
-            return $value;
+            return $arrayValue === null ? $value : $arrayValue;
         }
         
         protected function shorthandFastforward(Nette\Utils\Tokenizer $tokens, $until) {
