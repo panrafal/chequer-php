@@ -209,15 +209,19 @@ The rules of shorthand are:
   '$.key' // NOT ok! 
   ```
 * To not use the shorthand, **escape** the first dollar with backslash `\`. `'\\$tring!'`
+* You can **group** operators and values with round brackets `()`.
+  
+  To make queries more readable, and to be sure that everything works as you want, you should use
+  them a lot :)
 * There is __no operator precedence__. Query is evaluated from _left_ to _right_.
   
   This is __extremely important__ as every operation is done through operators. Including AND/OR constructs.<br/>
   `$ 1 = 1 && 2 = 2` will evaluate like `$ ((1 = 1) && 2) = 2`<br/>
   What you would want is rather this: `$ (1 = 1) && (2 = 2)`
-
-* You can **group** operators and values with parentheses `()`.
 * You can **quote** the strings with either single or double quotes. You can escape the quotes
-  by using backslash `\`. Both are valid: `'this "is" ok' "this 'is' ok two!"`
+  by using backslash `\`. Both are valid: `'this "is" ok' "this 'is' ok two!"`.
+
+  There are no special characters - `\n` will become a `n`.
 * Floating point **numbers** less than 1 should be prefixed with `0`. This is ok: `$< 0.1`, 
   this is **not**: `$< .1`. Moreover, the second example will work, because you will fetch a second
   digit from the number (equivalent to `$value[1]`).
@@ -268,16 +272,14 @@ arrays are changed to '(Array)'. This may change, so don't rely on it
   '$ one, two, three four' = ['one', 'two', 'three four']
   '$ one, two, (three, four)' = ['one', 'two', ['three', 'four']]
   ```
-* If value is immediately followed by a colon `:`, the next value will be put under that key in a **hashmap**.<br/>
-  Note, that key name should not have any unquoted or unparenthesized white spaces!
+* If value is immediately followed by a colon `:`, the next value will be put under that key in a **hashmap**.
   ```php
   '$ 1, two:2' = ['1', 'two' => 2]
   '$ (@time.year):"Now!"' = [2013 => 'Now!']
-  '$ year @time.year:"Now!"' = ['year', 2013 => 'Now!'] // unsecured whitespace!
-  '$ (year @time.year):"Now!"' = ['year 2013' => 'Now!'] // now it's ok!
+  '$ (year @time.year):"Now!"' = ['year 2013' => 'Now!']
 
   ```
-* When calling mathods and typecasts you can follow exactly the same syntax. Remember to put parentheses
+* When calling mathods and typecasts you can follow exactly the same syntax. Remember to put brackets
   directly after an identifier - without any whitespace! 
 
   ```php
@@ -292,6 +294,20 @@ arrays are changed to '(Array)'. This may change, so don't rely on it
   '$ @typecast(.subkey)' - calls typecast([value['subkey']])
   '$ @typecast' - calls typecast()
   ```
+* For conditional queries you can use conditional operator, a.k.a ternary operator `? :`.
+  
+  Current implementation doesn't understand multiple conditionals, so you have to group them with
+  brackets. Also, if you want to use arrays inside conditionals, you should put them in brackets too.
+
+  ```php
+  '$ (. > 1 ? (. > 2 ? C : B) : A)' = 'A' for value 1
+  '$ (. > 1 ? (. > 2 ? C : B) : A)' = 'B' for value 2
+
+  // it is possible to use arrays in conditional, and even use conditionals for keys!
+  '$ . > 1 ? (1, 2, 3) : FALSE, (. > 1 ? B:A) : (.> 1 ? 2:1)', 
+
+  ```
+
 * The logic behind it, is to collect a `value`, an `operator` and the `parameter`.
   Afterwards call the `operator`**(** `value`, `parameter` **)** and use it's result as the `value` of the next `operator`.
 
@@ -309,11 +325,15 @@ arrays are changed to '(Array)'. This may change, so don't rely on it
   Combining all this you can write `$= 10 || (= 20) || (! ~ "/\d/")` which is equivalent 
     to `$ (. = 10) || (. = 10) || (!(~ "/\d/"))`.
 
+  Note, that if both `value` and `parameter` are present, they both will be evaluated before passing
+  them to the operator. This means that in this statement: `$ 1 = 2 && 2 = 3 && 3 = 4` first *TWO*
+  statements will evaluated, and just the third will be skipped.
+
 * If the value you are trying to access is missing, it will return null. It holds true even if
   you are trying to access a deep subkey! You can set strict mode to TRUE to throw exceptions instead.
 * Operators may throw `\Chequer\BreakException` - this will exit current level with a return value
   set in the exception. This way `$or` and `$and` are made not greedy.
-    
+
 Note, that you can disable this syntax by using setShorthandSyntax(). This way, you will not have to
 worry about strings starting with '$'.
 
@@ -481,19 +501,21 @@ Note however, that `['hello' => 'bye']` will not match, because the first elemen
 ### Typecasts
 
 Typecasts are special objects which you can read data from and convert values into. They act like a
-regular subkeys, and can be accessed using dot notation (`.@typecast.subkey`) or plain notation (`@typecast`).
+regular subkeys, and can be accessed using dot notation (`@typecast.subkey` or '.subkey@typecast').
 
-There are two ways to use a typecast:
+There are three ways to use a typecast:
 - With `@typecast`, you can use the object itself. For example, `@time` will simply return current time
   as a \Chequer\Time object.
 
-  This works by returning the value for user-provided typecasts. <br/>
+  For user-provided typecasts, this works by returning the value . <br/>
   For built-in one's, the typecast_*() function will be called without any arguments.
 - With `@typecast()`. you can convert current value into another object, hence the word 'typecast'. 
-  For example, `@time()` will try to convert current value into \Chequer\Time object.
+  For example, `@time()` will try to convert current value into `\Chequer\Time` object.
 
-  This works by calling the value for user-provided typecasts, so they should be callable, but don't have to.<br/>
+  For user-provided typecasts, this works by calling the value. If it's not callable, exception will be thrown.<br/>
   For built-in one's, the typecast_*() function will be called with the current value as a first argument.
+- With `@typecast(arg1, arg2,...)` you can call the typecast function with whatever arguments you need.
+  For example, `@time("-1 week")` will give you `\Chequer\Time` object for a date week ago.
 
 Typecasts can be really powerfull:
 ```php
@@ -501,25 +523,27 @@ $chequer = new Chequer();
 // store the reference to the myFile
 $chequer->addTypecasts([
             'myFile' => 'myfile.txt', 
-            'myFunc' => function($file = null) {return rand(0,100);}
+            'myRandom' => function($file = null) {return rand(0,100);}
         ])
         ->setQuery([
             // convert SplFileinfo into Chequer\File. Note the brackets.
             '@file()' => [ 
                 /* File's modification time should be newer then on 'myfile.txt'.
                    Note the lack of brackets on @myFile - we are using myFile's value
-                   and then we convert it into a Chequer\File - by using the brackets.
+                   and then we convert it into a Chequer\File - by using the brackets this time.
                 */
-                '$cmp' => ['mtime', '>', '.@myFile.file().mtime'],
+                '.mtime' => '$> @file(@myFile).mtime',
+                /* This does exactly the same - converts @myFile to @file */
+                '.mtime' => '$> @myFile@file().mtime',
                 /* File should be modified in the current year. 
                    Note the lack of brackets - we are using the current time's value.
                    We also use a shorthand syntax for $cmp.
                 */
-                '$cmp' => '.mtime.year = .@time.year',
-                /* We call the myFunc typecast. The result should be grater than 50 */
-                '@myFunc()' => '$> 50'
+                '.mtime.year' => '@time.year',
+                /* We call the myRandom typecast. The result should be grater than 50 */
+                '@myRandom()' => '$> 50'
                 /* As myFunc is a closure, we can skip the brackets. It will be called nevertheless. */
-                '@myFunc' => '$> 50'
+                '@myRandom' => '$> 50'
             ]
         ]);
 

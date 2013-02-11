@@ -406,13 +406,17 @@ namespace {
         
         protected static $shcOperator = array(
             '$' => 1, '!' => 1, '~' => 1, '&' => 1, '^' => 1, '*' => 1, '-' => 1, '+' => 1, 
-            '=' => 1, '/' => 1, '|' => 1, '%' => 1, '<' => 1, '>' => 1
+            '=' => 1, '/' => 1, '|' => 1, '%' => 1, '<' => 1, '>' => 1, 
+            '?' => 1
         );
         protected static $shcWhitespace = array(
             ' ' => 1, "\t" => 1, "\r" => 1, "\n" => 1
         );
         protected static $shcStopchar = array(
-            '$' => 1, '.' => 1, '@' => 1, ',' => 1, ':' => 1,
+            '$' => 1, '!' => 1, '~' => 1, '&' => 1, '^' => 1, '*' => 1, '-' => 1, '+' => 1, 
+            '=' => 1, '/' => 1, '|' => 1, '%' => 1, '<' => 1, '>' => 1, 
+            '?' => 1,
+            '.' => 1, '@' => 1, ',' => 1, ':' => 1,
             '(' => 1, ')' => 1, 
             '\'' => 1, '"' => 1, 
             ' ' => 1, "\t" => 1, "\r" => 1, "\n" => 1
@@ -523,9 +527,10 @@ namespace {
         protected function shorthandParse(\Chequer\Tokenizer $tokens, $contextValue
                 , $allowKeys = true, $arrayKey = null, $value = null, $hasValue = false
         ) {
-            try {
-                $arrayValue = null;
-                while ($tokens->current !== null && $tokens->current !== ')') {
+            $arrayValue = null;
+            $conditionalFF = 0;
+            while ($tokens->current !== null && $tokens->current !== ')') {
+                try {
                     $operator = null;
                     $parameter = null;
                     // collect the values
@@ -552,11 +557,34 @@ namespace {
                         $arrayKey = count($arrayValue);
                         $hasValue = false;
                     } elseif ($tokens->current === ':') {
-                        if (!$allowKeys) return $value;
-                        
-                        $tokens->getToken();
-                        $arrayKey = is_scalar($value) ? $value : (string)$value;
+                        if ($conditionalFF) {
+                            // ternary FALSE
+                            $conditionalFF = false;
+                            $tokens->getToken();
+                            $this->shorthandFastforward($tokens, array(':' => true, ',' => true, ')' => true));
+                            continue;
+                        } else {
+                            // hashmap key
+                            if (!$allowKeys) return $value;
+
+                            $tokens->getToken();
+                            $arrayKey = is_scalar($value) ? $value : (string)$value;
+                            $hasValue = false;
+                        }
+                    } elseif ($tokens->current === '?') {
+                        // ternary TRUE
                         $hasValue = false;
+                        $tokens->getToken();
+                        if ($value) {
+                            // skip part after ':'
+                            $conditionalFF = true;
+                            continue;
+                        } else {
+                            // skip until ':'
+                            $this->shorthandFastforward($tokens, array(',' => true, ')' => true, ':' => true));
+                            if ($tokens->current === ':') $tokens->getToken();
+                            continue;
+                        }
                     } else {
                         // we have an operator for sure. 
                         if ($tokens->current[0] !== '$') {
@@ -569,23 +597,27 @@ namespace {
                         // collect the parameters
                         if (!$this->shorthandCollectValues($tokens, $contextValue, $parameter)) {
                             // another operator?
-                            if ($tokens->current !== null && $tokens->current !== ')') {
+                            if ($tokens->current !== null && $tokens->current !== ')'
+                                    && $tokens->current !== ',' && $tokens->current !== ':'
+                                    && $tokens->current !== '?'
+                            ) {
                                 $parameter = $this->shorthandParse($tokens, $contextValue, false, null, $value, $hasValue);
                             }
                         }
                         $value = $this->chequerOperator($operator, $value, $parameter);
                         $hasValue = true;
                     }
-                }; // while tokens last
-                // read ')'
-                $tokens->getToken();
+                } catch (\Chequer\ParseBreakException $e) {
+                    // fast forward to the end
+                    $this->shorthandFastforward($tokens, array(',' => true, ')' => true));
+                    //$tokens->getToken(); // read it
+                    $value = $e->result;
+                    $hasValue = true;
+                }
+            }; // while tokens last
+            // read ')'
+            $tokens->getToken();
                     
-            } catch (\Chequer\ParseBreakException $e) {
-                // fast forward to the end
-                $this->shorthandFastforward($tokens, array(')' => true));
-                $tokens->getToken(); // read it
-                return $e->result;
-            }
             if ($arrayKey !== null && $hasValue) {
                 $arrayValue[$arrayKey] = $value;
             }
@@ -602,7 +634,7 @@ namespace {
                     ++$nesting;
                 } elseif ($nesting && $char === ')') {
                     --$nesting;
-                } elseif (isset($until[$char])) {
+                } elseif (!$nesting && isset($until[$char])) {
                     // got it!
                     return;
                 }

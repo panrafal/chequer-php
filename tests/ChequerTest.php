@@ -186,13 +186,28 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             array('$= 10 || (= 20) || (! ~ "/\d/")', true, 'foo'),
             array('$ (. = 10) || (. = 10) || (!(~ "/\d/"))', true, 20),
             array('$ (. = 10) || (. = 10) || (!(~ "/\d/"))', true, 'foo'),
+            
+            array('$ 1, 2, 3 && FALSE, 4', array(1,2,false, 4)),
             // fast forward test
             array('1 + ( FALSE && TRUE && (this + (should "(not" be even "called!)" )) ) + 1', 2),
             
+            // conditional
+            //'$ (. > 1 ? . > 2 ? 3 : 1 = 1 ? 2 : 0 : 1)',
+            array('$ (. > 1 ? (. > 2 ? C : B) : A)', "A", 1),
+            array('$ (. > 1 ? (. > 2 ? C : B) : A)', "B", 2),
+            array('$ (. > 1 ? (. > 2 ? C : B) : A)', "C", 3),
+            
+            array('$ . > 1 ? (. > 2 ? C : (B:b)) : A, array, .>1?B:A : .>1?2:1', 
+                array(array("B" => "b"), "array", "B" => 2), 2),
+            array('$ . > 1 ? (. > 2 ? C : (B:b)) : A, array, .>1?B:A : .>1?2:1', 
+                array("A", "array", "A" => 1), 1),
             
         );
         $result = array();
-        foreach($array as $item) $result[$item[0]] = $item;
+        $i = 1;
+        foreach($array as $item) {
+            $result["#$i $item[0]"] = $item;
+        }
         return $result;
     }     
     
