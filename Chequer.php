@@ -736,7 +736,7 @@ namespace {
                             $rule = substr($rule, 1);
                         }
                         if (!isset($this->rules[$rule])) throw new \Chequer\ParseException("Rule '$rule' is undefined!");
-                        $query[] = $not ? ['$not' => $this->rules[$rule]] : $this->rules[$rule];
+                        $query[] = $not ? array('$not' => $this->rules[$rule]) : $this->rules[$rule];
                     }
                 }
                 return $this->query($value, $query);
