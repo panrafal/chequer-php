@@ -48,7 +48,8 @@ It's a part of **Chequer** project for now, but it probably should have it's own
 
 ------------------------------------------------------
 
-## Logic
+Logic
+-----
 
 You use `DynamicObjects` in the same way as every other object. You just have a lot more possibilities available.
 Below are typical object operations, with ordered lists of what will happen inside the object.
@@ -63,7 +64,8 @@ Will echo:
 * Dynamic property set with `$object->property = 'a';` <small>(PHP handled)</small>
 * Anything handled by `__get()` <small>(subclass handled)</small>
 * Result of getter function set with `addGetter()` (if exists)
-* Result of auto getter function set with `addGetter(self::AUTO_PREFIX, 'prefix')` (if exists)
+* Result of OVERLOAD_ALL getter function called with `callback(&$handled = true, $name)` (if exists, and &$handled is TRUE)
+* Result of OVERLOAD_PREFIX getter function called with `$prefix$name($name)` (if exists)
 * Parent object's property if `isset($parent->property)` is true
 * null
 
@@ -79,7 +81,8 @@ Will set:
 * Anything handled by `__set()` <small>(subclass handled)</small>
 * Any `Closure` will be bound to `$this`
 * Call setter function set with `addSetter()` (if exists)
-* Call auto setter function set with `addSetter(self::AUTO_PREFIX, 'prefix')` (if exists)
+* Call OVERLOAD_ALL setter function with `callback(&$handled = true, $name, $value)` (if exists, and &$handled is TRUE)
+* Call OVERLOAD_PREFIX setter function with `$prefix$name($name, $value)` (if exists)
 * Parent object's property (if `isset($parent->property)` is true.)
 * New dynamic property
 
@@ -103,6 +106,7 @@ Will call:
 * Anything handled by `__call()` <small>(subclass handled)</small>
 * Function set with `addMethod()`
 * Any `Closure` or `callable` that is the result of `$object->property`
+* Call OVERLOAD_ALL method function with `callback(&$handled = true, $name, $arguments)` (if exists, and &$handled is TRUE)
 * Parent object's method
 * throw an exception
 
@@ -125,7 +129,8 @@ Will check:
 * Declared and dynamic properties <small>(PHP handled)</small>
 * Anything handled by `__isset()` <small>(subclass handled)</small>
 * Existence of getter function set with `addGetter()`
-* Existence of auto getter function set with `addGetter(self::AUTO_PREFIX, 'prefix')` (if exists)
+* Result from OVERLOAD_ALL getter called with `callback(&$handled = false, $name)`. Callback should return TRUE, and &$handled should be set to TRUE.
+* Existence of OVERLOAD_PREFIX getter function with the name `$prefix$name`
 * Parent object's property with `isset($parent->property)`
 
 There is also a `isCallable()` function, that will look for anything that can be called.
@@ -139,8 +144,79 @@ Will unset:
 * Declared and dynamic properties <small>(PHP handled)</small>
 * Anything handled by `__unset()` <small>(subclass handled)</small>
 * Set null with getter function set with `addGetter()`
-* Set null with auto getter function set with `addGetter(self::AUTO_PREFIX, 'prefix')` (if exists)
+* Call OVERLOAD_ALL setter function with `callback(&$handled = true, $name, null)` (if exists, and &$handled is TRUE)
+* Call OVERLOAD_PREFIX setter function with `$prefix$name($name, null)` (if exists)
 * Parent object's property with `unset($parent->property)`
+
+------------------------------------------------------
+
+Callbacks
+---------
+
+You can set callbacks with `addGetter`, `addSetter`, `addMethod` and `addParameter` which combines all two/three in one.
+
+You can provide four types of callbacks. Callback arguments are denoted as `...`:
+* `string` - Will call `$this->{$name}(...)`
+* `Closure` - Will call `$closure->methodname(...)`, plus Closures are always bound to `$this`.
+* `[class, methodname]` - Will call `class::methodname($this, ...)`
+* `[object, methodname]` - Will call `$object->methodname($this, ...)`
+
+Arguments for callbacks are:
+* For getters: ()
+* For setters: (`value`)
+* For methods: (method arguments)
+
+### OVERLOAD_ALL
+You can simulate __get, __set, __call, __unset and __isset by adding OVERLOAD_ALL callback.
+
+Every call has the `$handled` reference as the first argument. 
+* For get, set, unset and call `$handled` will be set to TRUE. It should be set to FALSE if handler is NOT handling this property/method.
+* For isset and isCallback `$handled` will be set to FALSE. It should be set to TRUE is handler IS handling this property/method.
+
+By using `addGetter` you override:
+* __get: callback(&$handled = TRUE, $name) = $value
+* __isset: callback(&$handled = FALSE, $name) = $isSetOrNot
+
+By using `addSetter` you override:
+* __set: callback(&$handled = TRUE, $name, $value)
+* __unset: callback(&$handled = FALSE, $name, null)
+
+By using `addMethod` you override:
+* __call: callback(&$handled = TRUE, $name, $value) = $result
+* isCallback: callback(&$handled = FALSE, $name, null) = $isCallbackOrNot
+
+A good starting point for a closure would be:
+
+```php
+    function (&$handled, $name, $value = null) {
+        // check handled names
+        if ($name !== ...) { 
+            // we dont handle these...
+            $handled = false;
+            return false;
+        }
+        if (!$handled) {
+            $handled = true;
+            // check if it is set, or is callable
+            return ...;
+        }
+        // do something usefull
+        ...
+    }
+```
+
+Note, that if the callback is anything other than object's method or Closure, the list of arguments will always be prepended with `$this`.
+
+### OVERLOAD_PREFIX
+You can add overloading prefix for getter and setter. This will translate all unknown parameters *and* methods
+to call `prefix`+`name` functions:
+
+```php
+$o->addGetter(DynamicObject::OVERLOAD_PREFIX, 'get_');
+echo $o->foo;
+// in fact calls:
+echo $o->get_foo();
+```
 
 ------------------------------------------------------
 

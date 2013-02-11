@@ -44,13 +44,27 @@ class TestObject extends DynamicObject {
     public $id = 1;
     public $declaredPublicProperty = 'declaredPublicProperty';
     private $declaredPrivateProperty = 'declaredPrivateProperty';
-    private $_objectGet = 'objectGet';
-    private $_objectGetter = 'objectGetter';
-    private $_objectAutoGetter = 'objectAutoGetter';
+    public $_objectGet = 'objectGet';
+    public $_objectGetter = 'objectGetter';
+    public $_objectAutoGetter = 'objectAutoGetter';
+    public $_objectAll = array('objectAllGetter' => 'objectAllGetter');
 
-    protected $__getters = array('objectGetter' => 'objectGetterSetter', 'objectEmptyGetter' => 'objectEmptyGetterSetter', DynamicObject::AUTO_PREFIX => 'get_');
-    protected $__setters = array('objectGetter' => 'objectGetterSetter', 'objectEmptyGetter' => 'objectEmptyGetterSetter', DynamicObject::AUTO_PREFIX => 'set_');
-    protected $__methods = array();
+    protected $__getters = array(
+        'objectGetter' => 'objectGetterSetter', 
+        'objectEmptyGetter' => 'objectEmptyGetterSetter', 
+        DynamicObject::OVERLOAD_PREFIX => 'get_',
+        DynamicObject::OVERLOAD_ALL => 'allGetterSetter'
+    );
+    protected $__setters = array(
+        'objectGetter' => 'objectGetterSetter', 
+        'objectEmptyGetter' => 'objectEmptyGetterSetter', 
+        DynamicObject::OVERLOAD_PREFIX => 'set_',
+        DynamicObject::OVERLOAD_ALL => 'allGetterSetter'
+    );
+    protected $__methods = array(
+        DynamicObject::OVERLOAD_PREFIX => 'set_',
+        DynamicObject::OVERLOAD_ALL => 'allMethod'
+    );
     
     public function __construct($parent = null) {
         parent::__construct($parent);
@@ -86,6 +100,36 @@ class TestObject extends DynamicObject {
     
     protected function set_objectAutoGetter($value) {
         $this->_objectAutoGetter = $value;
+    }
+    
+    protected function allGetterSetter(&$handled, $name, $value = false) {
+        if ($name !== 'objectAllGetter') {
+            $handled = false;
+            return false;
+        }
+        if (!$handled) {
+            $handled = true;
+            return $this->_objectAll[$name] !== null;
+        }
+        
+        if ($value !== false) {
+            $this->_objectAll[$name] = $value;
+        } else {
+            return $this->_objectAll[$name];
+        }
+    }
+    
+    protected function allMethod(&$handled, $name, $arguments) {
+        if ($name !== 'objectAllMethod') {
+            $handled = false;
+            return false;
+        }
+        if (!$handled) {
+            $handled = true;
+            return true;
+        }
+        
+        return "$name(".json_encode($arguments).")";
     }
     
     public function __call($name, $arguments) {
@@ -209,7 +253,9 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals('objectDynamicProperty', $this->obj->objectDynamicProperty);
         $this->assertTrue(isset($this->obj->objectDynamicProperty));
         
-        $this->assertEquals(array('id' => 1, 'objectDynamicProperty' => 'objectDynamicProperty', 'declaredPublicProperty' => 'declaredPublicProperty'), get_object_vars($this->obj));
+        $this->assertEquals(array('id', 'declaredPublicProperty', 
+            '_objectGet', '_objectGetter', '_objectAutoGetter', '_objectAll', 'objectDynamicProperty'), 
+                    array_keys(get_object_vars($this->obj)));
         
         // unset
         unset($this->obj->objectDynamicProperty);
@@ -229,6 +275,7 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         // set
         $this->obj->objectGet = 'foo';
         $this->assertEquals('foo', $this->obj->objectGet);
+        $this->assertEquals('foo', $this->obj->_objectGet);
         
         $this->obj->parentGet = 'bar';
         $this->assertEquals('bar', $this->obj->parentGet);
@@ -254,6 +301,7 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         // set
         $this->obj->objectGetter = 'foo';
         $this->assertEquals('foo', $this->obj->objectGetter);
+        $this->assertEquals('foo', $this->obj->_objectGetter);
         
         // unset
         unset($this->obj->objectGetter);
@@ -323,6 +371,7 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         // set
         $this->obj->objectAutoGetter = 'foo';
         $this->assertEquals('foo', $this->obj->objectAutoGetter);
+        $this->assertEquals('foo', $this->obj->_objectAutoGetter);
         
         // unset
         unset($this->obj->objectAutoGetter);
@@ -338,7 +387,46 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $this->assertTrue($this->obj->isCallable('set_test'));
         
         $new = new TestObject();
-        $this->obj->get_test = $this->obj->set_test = $this->closureProperty;
+        $new->get_test = $new->set_test = $this->closureProperty;
+        
+        $this->clonedPropertyTest($new);
+    }
+
+    // done
+    public function testAutoAllGetterSetter() {
+        // isset
+        $this->assertTrue(isset($this->obj->objectAllGetter));
+        
+        // get
+        $this->assertEquals('objectAllGetter', $this->obj->objectAllGetter);
+        
+        // set
+        $this->obj->objectAllGetter = 'foo';
+        $this->assertEquals('foo', $this->obj->objectAllGetter);
+        $this->assertEquals(array('objectAllGetter' => 'foo'), $this->obj->_objectAll);
+        
+        // unset
+        unset($this->obj->objectAllGetter);
+        $this->assertFalse(isset($this->obj->objectAllGetter));
+        $this->assertNull($this->obj->objectAllGetter);
+
+        // shadowing...
+        $this->obj->addProperty(DynamicObject::OVERLOAD_ALL, function(&$handled, $name, $value = false) {
+            if (!$handled) {
+                // handle all
+                $handled = true;
+                return true;
+            }
+            if ($value === false) return $this->overloadAllTest;
+            else $this->overloadAllTest = $value;
+        }, false);
+        
+        $this->obj->parentDeclaredProperty = 'test';
+        $this->assertEquals('test', $this->obj->parentDeclaredProperty);
+        $this->assertEquals('parentDeclaredProperty', $this->parent->parentDeclaredProperty);
+        
+        $new = new TestObject();
+        $new->addProperty(DynamicObject::OVERLOAD_ALL, 'allGetterSetter');
         
         $this->clonedPropertyTest($new);
     }
@@ -402,6 +490,22 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($this->obj, $this->obj->test());
         
         $this->assertEquals('test', $this->obj->test('test'));
+    }
+    
+    // done
+    public function testCallOverloadingAll() {
+        $this->obj->addMethod(DynamicObject::OVERLOAD_ALL, function(&$handled, $name, $arguments = null) {
+            if (!$handled) {
+                // handle all
+                $handled = true;
+                return true;
+            }
+            return "$name(".json_encode($arguments).")";
+        }, false);
+
+        $this->assertTrue($this->obj->isCallable('anything really!'), 'Anything should be callable');
+        $this->assertEquals('parentMethod([])', $this->obj->parentMethod(), 'Should be overshadowed');
+
     }
     
     public function testCallMissing() {
