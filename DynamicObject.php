@@ -66,7 +66,7 @@ class DynamicObject {
     }
 
     protected function _prepareClosure($group, $name, $bind, &$closure = null) {
-        if (PHP_VERSION_ID < 50300) return;
+        if (PHP_VERSION_ID < 50400) return;
         if ($bind) {
             $this->__closures[$group][$name] = true;
             if ($closure) $closure = $closure->bindTo($this, $this);
