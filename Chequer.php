@@ -83,6 +83,7 @@ namespace {
                     
         }
 
+        /** @return Chequer */
         public static function create( $query = false, $matchAll = null, $deepArrays = true ) {
             return new self($query, $matchAll, $deepArrays);
         }
@@ -266,6 +267,12 @@ namespace {
             return $this->query($value, $this->query, $matchAll === null ? $this->matchAll : $matchAll);
         }
 
+        /** Alias for check()
+         */
+        public function evaluate( $value, $matchAll = null ) {
+            return $this->check($value, $matchAll);
+        }        
+        
         /** Run the query for every element in the array or iterator and return the results.
          * Non-numeric keys are preserved.
          * 
