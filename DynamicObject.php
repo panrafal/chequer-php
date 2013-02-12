@@ -46,22 +46,22 @@ class DynamicObject {
     }
 
 
-    public function getParentObject() {
+    public function _getParentObject() {
         return $this->__parent;
     }
 
 
-    public function getGetters() {
+    public function _getGetters() {
         return $this->__getters;
     }
 
 
-    public function getSetters() {
+    public function _getSetters() {
         return $this->__setters;
     }
 
 
-    public function getMethods() {
+    public function _getMethods() {
         return $this->__methods;
     }
 
@@ -69,7 +69,7 @@ class DynamicObject {
     /** 
      * @param $property Property name or self::OVERLOAD_PREFIX to set getter prefix (eg. 'get_')
      * @return self */
-    public function addGetter($property, $callback) {
+    public function _addGetter($property, $callback) {
         if ($callback instanceof Closure) $callback = $callback->bindTo($this, $this);
         $this->__getters[$property] = $callback;
         return $this;
@@ -79,7 +79,7 @@ class DynamicObject {
     /** 
      * @param $property Property name or self::OVERLOAD_PREFIX to set setter prefix (eg. 'get_')
      * @return self */
-    public function addSetter($property, $callback) {
+    public function _addSetter($property, $callback) {
         if ($callback instanceof Closure) $callback = $callback->bindTo($this, $this);
         $this->__setters[$property] = $callback;
         return $this;
@@ -87,7 +87,7 @@ class DynamicObject {
 
 
     /** @return self */
-    public function addMethod($property, $callback) {
+    public function _addMethod($property, $callback) {
         if ($callback instanceof Closure) $callback = $callback->bindTo($this, $this);
         $this->__methods[$property] = $callback;
         return $this;
@@ -95,7 +95,7 @@ class DynamicObject {
 
 
     /** @return self */
-    public function addProperty($property, $callback, $setMethod = true) {
+    public function _addProperty($property, $callback, $setMethod = true) {
         if ($callback instanceof Closure) $callback = $callback->bindTo($this, $this);
         $this->__getters[$property] = $this->__setters[$property] = $callback;
         if ($setMethod) $this->__methods[$property] = $callback;
@@ -104,7 +104,7 @@ class DynamicObject {
 
 
     /** Returns TRUE if $this->property() is callable */
-    public function isCallable($name) {
+    public function _isCallable($name) {
         if (method_exists($this, $name))
             return true;
         if (isset($this->__methods[$name])) {
@@ -162,7 +162,7 @@ class DynamicObject {
                 // protect from getting the getter
                 && strncmp($name, $this->__getters[self::OVERLOAD_PREFIX], strlen($this->__getters[self::OVERLOAD_PREFIX])) !== 0
                 && ($autoName = $this->__getters[self::OVERLOAD_PREFIX] . $name)
-                && $this->isCallable($autoName)
+                && $this->_isCallable($autoName)
                 ) {
             return $this->{$autoName}();
         }
@@ -184,7 +184,7 @@ class DynamicObject {
         }
         if (isset($this->__getters[self::OVERLOAD_PREFIX])
                 && ($autoName = $this->__getters[self::OVERLOAD_PREFIX] . $name)
-                && $this->isCallable($autoName)
+                && $this->_isCallable($autoName)
                 ) {
             return true;
         }
@@ -210,7 +210,7 @@ class DynamicObject {
         }
         if (isset($this->__setters[self::OVERLOAD_PREFIX])
                 && ($autoName = $this->__setters[self::OVERLOAD_PREFIX] . $name)
-                && $this->isCallable($autoName)
+                && $this->_isCallable($autoName)
                 ) {
             return $this->{$autoName}($value);
         }
@@ -242,7 +242,7 @@ class DynamicObject {
         }
         if (isset($this->__setters[self::OVERLOAD_PREFIX])
                 && ($autoName = $this->__setters[self::OVERLOAD_PREFIX] . $name)
-                && $this->isCallable($autoName)
+                && $this->_isCallable($autoName)
                 ) {
             return $this->{$autoName}(null);
         }

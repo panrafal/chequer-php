@@ -429,7 +429,7 @@ namespace {
         
         protected function shorthandQueryRun($value, $query) {
             // split query into tokens
-            $tokens = new \Chequer\Tokenizer($query, '/\$[a-z!~&^*\-+=\/|%<>]+|[!~&\^*\-+=\/|%<>]{1,3}|(?<!\.)\d+\.\d+|\d+|[a-z]+|\s+|./i');
+            $tokens = new \Chequer\Tokenizer($query, '/\$[a-z!~&^*\-+=\/|%<>]+|(?<![.@\d])-?(?:\d+\.)?\d+|[!~&\^*\-+=\/|%<>]{1,3}|\d+|[a-z]+|\s+|./i');
             $result = $this->shorthandParse($tokens, $value);
             if ($tokens->current !== null) throw new \Chequer\ParseException("Query finished prematurely!");
             return $result;
@@ -438,13 +438,17 @@ namespace {
         
         protected static $shcOperator = array(
             '$' => 1, '!' => 1, '~' => 1, '&' => 1, '^' => 1, '*' => 1, '-' => 1, '+' => 1, 
-            '=' => 1, '/' => 1, '|' => 1, '%' => 1, '<' => 1, '>' => 1
+            '=' => 1, '/' => 1, '|' => 1, '%' => 1, '<' => 1, '>' => 1, 
+            '?' => 1
         );
         protected static $shcWhitespace = array(
             ' ' => 1, "\t" => 1, "\r" => 1, "\n" => 1
         );
         protected static $shcStopchar = array(
-            '$' => 1, '.' => 1, '@' => 1, ',' => 1, ':' => 1,
+            '$' => 1, '!' => 1, '~' => 1, '&' => 1, '^' => 1, '*' => 1, '-' => 1, '+' => 1, 
+            '=' => 1, '/' => 1, '|' => 1, '%' => 1, '<' => 1, '>' => 1, 
+            '?' => 1,
+            '.' => 1, '@' => 1, ',' => 1, ':' => 1,
             '(' => 1, ')' => 1, 
             '\'' => 1, '"' => 1, 
             ' ' => 1, "\t" => 1, "\r" => 1, "\n" => 1
@@ -464,7 +468,8 @@ namespace {
                     $tokens->getToken();
                     // evaluate
                     $valueItem = $this->shorthandParse($tokens, $contextValue);
-                } elseif (isset(self::$shcOperator[$char]) || $char === ',' || $char === ':') {
+                } elseif ((isset(self::$shcOperator[$char]) && ($char !== '-' || !is_numeric($tokens->current))) 
+                        || $char === ',' || $char === ':') {
                     // an operator, array or hashmap
                     return $collected;
                 } elseif (isset(self::$shcWhitespace[$char])) {
@@ -555,9 +560,10 @@ namespace {
         protected function shorthandParse(\Chequer\Tokenizer $tokens, $contextValue
                 , $allowKeys = true, $arrayKey = null, $value = null, $hasValue = false
         ) {
-            try {
-                $arrayValue = null;
-                while ($tokens->current !== null && $tokens->current !== ')') {
+            $arrayValue = null;
+            $conditionalFF = 0;
+            while ($tokens->current !== null && $tokens->current !== ')') {
+                try {
                     $operator = null;
                     $parameter = null;
                     // collect the values
@@ -584,11 +590,34 @@ namespace {
                         $arrayKey = count($arrayValue);
                         $hasValue = false;
                     } elseif ($tokens->current === ':') {
-                        if (!$allowKeys) return $value;
-                        
-                        $tokens->getToken();
-                        $arrayKey = is_scalar($value) ? $value : (string)$value;
+                        if ($conditionalFF) {
+                            // ternary FALSE
+                            $conditionalFF = false;
+                            $tokens->getToken();
+                            $this->shorthandFastforward($tokens, array(':' => true, ',' => true, ')' => true));
+                            continue;
+                        } else {
+                            // hashmap key
+                            if (!$allowKeys) return $value;
+
+                            $tokens->getToken();
+                            $arrayKey = is_scalar($value) ? $value : (string)$value;
+                            $hasValue = false;
+                        }
+                    } elseif ($tokens->current === '?') {
+                        // ternary TRUE
                         $hasValue = false;
+                        $tokens->getToken();
+                        if ($value) {
+                            // skip part after ':'
+                            $conditionalFF = true;
+                            continue;
+                        } else {
+                            // skip until ':'
+                            $this->shorthandFastforward($tokens, array(',' => true, ')' => true, ':' => true));
+                            if ($tokens->current === ':') $tokens->getToken();
+                            continue;
+                        }
                     } else {
                         // we have an operator for sure. 
                         if ($tokens->current[0] !== '$') {
@@ -601,23 +630,27 @@ namespace {
                         // collect the parameters
                         if (!$this->shorthandCollectValues($tokens, $contextValue, $parameter)) {
                             // another operator?
-                            if ($tokens->current !== null && $tokens->current !== ')') {
+                            if ($tokens->current !== null && $tokens->current !== ')'
+                                    && $tokens->current !== ',' && $tokens->current !== ':'
+                                    && $tokens->current !== '?'
+                            ) {
                                 $parameter = $this->shorthandParse($tokens, $contextValue, false, null, $value, $hasValue);
                             }
                         }
                         $value = $this->chequerOperator($operator, $value, $parameter);
                         $hasValue = true;
                     }
-                }; // while tokens last
-                // read ')'
-                $tokens->getToken();
+                } catch (\Chequer\ParseBreakException $e) {
+                    // fast forward to the end
+                    $this->shorthandFastforward($tokens, array(',' => true, ')' => true));
+                    //$tokens->getToken(); // read it
+                    $value = $e->result;
+                    $hasValue = true;
+                }
+            }; // while tokens last
+            // read ')'
+            $tokens->getToken();
                     
-            } catch (\Chequer\ParseBreakException $e) {
-                // fast forward to the end
-                $this->shorthandFastforward($tokens, array(')' => true));
-                $tokens->getToken(); // read it
-                return $e->result;
-            }
             if ($arrayKey !== null && $hasValue) {
                 $arrayValue[$arrayKey] = $value;
             }
@@ -634,7 +667,7 @@ namespace {
                     ++$nesting;
                 } elseif ($nesting && $char === ')') {
                     --$nesting;
-                } elseif (isset($until[$char])) {
+                } elseif (!$nesting && isset($until[$char])) {
                     // got it!
                     return;
                 }
@@ -644,16 +677,37 @@ namespace {
         
         /* ---------- operators ------------------------------------------------- */
 
+        protected static function toString($a, $serialize = true) {
+            if (is_object($a) && method_exists($a, '__toString')) {
+                return (string)$a;
+            } elseif ($serialize && (is_object($a) || is_array($a))) {
+                return serialize($a);
+            }
+            return (string)$a;
+        }
+        
+        protected static function unifyTypes(&$a, &$b) {
+            if (is_scalar($a) && !is_scalar($b)) {
+                $b = self::toString($b);
+            } elseif (!is_scalar($a) && is_scalar($b)) {
+                $a = self::toString($a);
+            } elseif (!is_scalar($a) && !is_scalar($b) && gettype($a) != gettype($b)) {
+                $a = self::toString($a);
+                $b = self::toString($b);
+            }
+        }
+        
         protected function operator_not( $value, $rule ) {
             return !$this->query($value, $rule);
         }
 
-
         protected function operator_eq( $value, $rule ) {
+            self::unifyTypes($value, $rule);
             return $value == $rule;
         }
         
         protected function operator_ne( $value, $rule ) {
+            self::unifyTypes($value, $rule);
             return $value != $rule;
         }
 
@@ -663,26 +717,32 @@ namespace {
 
 
         protected function operator_nc( $value, $rule ) {
+            $value = self::toString($value);
+            $rule = self::toString($rule);
             return mb_strtolower($value) === mb_strtolower($rule);
         }
 
 
         protected function operator_gt( $value, $rule ) {
+            self::unifyTypes($value, $rule);
             return $value > $rule;
         }
 
 
         protected function operator_gte( $value, $rule ) {
+            self::unifyTypes($value, $rule);
             return $value >= $rule;
         }
 
 
         protected function operator_lt( $value, $rule ) {
+            self::unifyTypes($value, $rule);
             return $value < $rule;
         }
 
 
         protected function operator_lte( $value, $rule ) {
+            self::unifyTypes($value, $rule);
             return $value <= $rule;
         }
 
@@ -690,6 +750,8 @@ namespace {
         protected function operator_between( $value, $rule ) {
             if (count($rule) != 2)
                     throw new Chequer\ParseException('Two element array required for $between!');
+            self::unifyTypes($value, $rule[0]);
+            self::unifyTypes($value, $rule[1]);
             return $value >= $rule[0] && $value <= $rule[1];
         }
 
@@ -725,8 +787,7 @@ namespace {
 
 
         protected function operator_regex( $value, $rule ) {
-            if (!is_scalar($value) && !method_exists($value, '__toString'))
-                    throw new \Chequer\ParseException('String required for regex matching.');
+            $value = self::toString($value);
             if ($rule[0] !== '/' && $rule[0] !== '#' && $rule[0] !== '~') {
                 $rule = "~{$rule}~";
             }
@@ -768,7 +829,7 @@ namespace {
                             $rule = substr($rule, 1);
                         }
                         if (!isset($this->rules[$rule])) throw new \Chequer\ParseException("Rule '$rule' is undefined!");
-                        $query[] = $not ? ['$not' => $this->rules[$rule]] : $this->rules[$rule];
+                        $query[] = $not ? array('$not' => $this->rules[$rule]) : $this->rules[$rule];
                     }
                 }
                 return $this->query($value, $query);
@@ -821,7 +882,7 @@ namespace {
                 return $value / $operand;
             }
             if ($this->strictMode) 
-                throw new \Chequer\ParseException("Bad operand types for *");
+                throw new \Chequer\ParseException("Bad operand types for /");
             else 
                 return null;
         }        

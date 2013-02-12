@@ -11,10 +11,10 @@ For example, you can __dynamically create classes__!
         // create a class with a getter, one method and one property
         $myClass = new DynamicObject();
         $myClass->timeOffset = 'now';
-        $myClass->addGetter('whatTime', function() {
+        $myClass->_addGetter('whatTime', function() {
                 return $this->format(strtotime($this->timeOffset));
             })
-            ->addMethod('format', function($value) {
+            ->_addMethod('format', function($value) {
                 return strftime('%Y-%m-%d', $value);
             })
             ;
@@ -36,7 +36,7 @@ Or __extend existing objects__!
         $superFile = new DynamicObject($file);
         // overriding methods is THAT easy!
         $superFile->getSize = function() {
-            return $this->getParentObject()->getSize() * 1000;
+            return $this->_getParentObject()->getSize() * 1000;
         };
         
         echo 'Whoa! ' . $superFile->getFilename() . ' is somewhat bigger! It has ' . $superFile->getSize();
@@ -63,7 +63,7 @@ Will echo:
 * Declared property <small>(PHP handled)</small>
 * Dynamic property set with `$object->property = 'a';` <small>(PHP handled)</small>
 * Anything handled by `__get()` <small>(subclass handled)</small>
-* Result of getter function set with `addGetter()` (if exists)
+* Result of getter function set with `_addGetter()` (if exists)
 * Result of OVERLOAD_ALL getter function called with `callback(&$handled = true, $name)` (if exists, and &$handled is TRUE)
 * Result of OVERLOAD_PREFIX getter function called with `$prefix$name($name)` (if exists)
 * Parent object's property if `isset($parent->property)` is true
@@ -80,7 +80,7 @@ Will set:
 * Declared or existing dynamic property <small>(PHP handled)</small>
 * Anything handled by `__set()` <small>(subclass handled)</small>
 * Any `Closure` will be bound to `$this`
-* Call setter function set with `addSetter()` (if exists)
+* Call setter function set with `_addSetter()` (if exists)
 * Call OVERLOAD_ALL setter function with `callback(&$handled = true, $name, $value)` (if exists, and &$handled is TRUE)
 * Call OVERLOAD_PREFIX setter function with `$prefix$name($name, $value)` (if exists)
 * Parent object's property (if `isset($parent->property)` is true.)
@@ -104,7 +104,7 @@ $object->method();
 Will call:
 * Existing method <small>(PHP handled)</small>
 * Anything handled by `__call()` <small>(subclass handled)</small>
-* Function set with `addMethod()`
+* Function set with `_addMethod()`
 * Any `Closure` or `callable` that is the result of `$object->property`
 * Call OVERLOAD_ALL method function with `callback(&$handled = true, $name, $arguments)` (if exists, and &$handled is TRUE)
 * Parent object's method
@@ -128,7 +128,7 @@ isset($object->property);
 Will check:
 * Declared and dynamic properties <small>(PHP handled)</small>
 * Anything handled by `__isset()` <small>(subclass handled)</small>
-* Existence of getter function set with `addGetter()`
+* Existence of getter function set with `_addGetter()`
 * Result from OVERLOAD_ALL getter called with `callback(&$handled = false, $name)`. Callback should return TRUE, and &$handled should be set to TRUE.
 * Existence of OVERLOAD_PREFIX getter function with the name `$prefix$name`
 * Parent object's property with `isset($parent->property)`
@@ -143,7 +143,7 @@ unset($object->property);
 Will unset:
 * Declared and dynamic properties <small>(PHP handled)</small>
 * Anything handled by `__unset()` <small>(subclass handled)</small>
-* Set null with getter function set with `addGetter()`
+* Set null with getter function set with `_addGetter()`
 * Call OVERLOAD_ALL setter function with `callback(&$handled = true, $name, null)` (if exists, and &$handled is TRUE)
 * Call OVERLOAD_PREFIX setter function with `$prefix$name($name, null)` (if exists)
 * Parent object's property with `unset($parent->property)`
@@ -153,7 +153,7 @@ Will unset:
 Callbacks
 ---------
 
-You can set callbacks with `addGetter`, `addSetter`, `addMethod` and `addParameter` which combines all two/three in one.
+You can set callbacks with `_addGetter`, `_addSetter`, `_addMethod` and `_addParameter` which combines all two/three in one.
 
 You can provide four types of callbacks. Callback arguments are denoted as `...`:
 * `string` - Will call `$this->{$name}(...)`
@@ -173,15 +173,15 @@ Every call has the `$handled` reference as the first argument.
 * For get, set, unset and call `$handled` will be set to TRUE. It should be set to FALSE if handler is NOT handling this property/method.
 * For isset and isCallback `$handled` will be set to FALSE. It should be set to TRUE is handler IS handling this property/method.
 
-By using `addGetter` you override:
+By using `_addGetter` you override:
 * __get: callback(&$handled = TRUE, $name) = $value
 * __isset: callback(&$handled = FALSE, $name) = $isSetOrNot
 
-By using `addSetter` you override:
+By using `_addSetter` you override:
 * __set: callback(&$handled = TRUE, $name, $value)
 * __unset: callback(&$handled = FALSE, $name, null)
 
-By using `addMethod` you override:
+By using `_addMethod` you override:
 * __call: callback(&$handled = TRUE, $name, $value) = $result
 * isCallback: callback(&$handled = FALSE, $name, null) = $isCallbackOrNot
 
