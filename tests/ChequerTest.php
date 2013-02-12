@@ -207,10 +207,10 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
                 array("A", "array", "A" => 1), 1),
 
             // context change
-            array('foo $( . = foo )'),
-            array('foo $ . = foo && (. ~ foo)'),
-            array('(one:1, two:2)$( .two )', 2),
-            array('(one:., two:. + .)$( .two ) + .', 3, 1),
+            array('foo => ( . = foo )'),
+            array('foo => . = foo && (. ~ foo)'),
+            array('(one:1, two:2) => ( .two )', 2),
+            array('(one:., two:. + .) => ( .two ) + .', 3, 1),
         );
         $result = array();
         $i = 1;

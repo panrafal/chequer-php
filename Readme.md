@@ -105,7 +105,7 @@ $array = array_filter($array, new Chequer(['$between' => [2, 5]]))
 This will iterate through files with 'php' or 'html' extensions, that are older than one day.
 ```php
 $files = new FilesystemIterator(dirname(__DIR__));
-$files = new CallbackFilterIterator($files, new Chequer('$ @file() $(.extension $in(php, html) && (.mtime < -1 day))'));
+$files = new CallbackFilterIterator($files, new Chequer('$ @file() => (.extension $in(php, html) && (.mtime < -1 day))'));
 foreach($files as $file) {}
 ```
 
@@ -262,13 +262,13 @@ The rules of shorthand are:
   '$ .method().key' = calls value.method()['key']
   '$ (one:1, two:2).two' = ['one' => 1, 'two' => 2]['two']
   ```
-* To alter the `context value` you can use the `$()` operator. Everything inside brackets will refer to
+* To switch the `context value` you can use the `=> ()` operator. Everything inside brackets will refer to
   the new value when using dot notation.
 
   ```php
-    '$ foo $( . = foo )' - uses "foo" as a new context, so . = "foo" is true 
-    '$ (one:1, two:2) $ ( .two )' - passes array as the new context, so the result is 2
-    '$ @time() $ ((.year = 2013) && (.month = 10))' - passes the @time() object - you don't have to cast it twice!
+    '$ foo => ( . = foo )' - uses "foo" as a new context, so . = "foo" is true 
+    '$ (one:1, two:2) => ( .two )' - passes array as the new context, so the result is 2
+    '$ @time() => ((.year = 2013) && (.month = 10))' - passes the @time() object - you don't have to cast it twice!
 
   ```
 * The **strings** can be unquoted if they don't contain any special characters. 
@@ -518,7 +518,8 @@ The currently available operators are:
 
 
 
-### Subkeys
+### Subkeys, dot notation
+[dotnotation]: #subkeys-dot-notation
 
 Subkey can be:
 * array's key 

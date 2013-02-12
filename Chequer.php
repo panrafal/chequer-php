@@ -677,16 +677,16 @@ namespace {
                         }
                         
                         // collect the parameters
-                        if (!$this->shorthandCollectValues($tokens, $operator === '$' ? $value : $contextValue, $parameter)) {
+                        if (!$this->shorthandCollectValues($tokens, $operator === '=>' ? $value : $contextValue, $parameter)) {
                             // another operator?
                             if ($tokens->current !== null && $tokens->current !== ')'
                                     && $tokens->current !== ',' && $tokens->current !== ':'
                                     && $tokens->current !== '?'
                             ) {
-                                $parameter = $this->shorthandParse($tokens, $operator === '$' ? $value : $contextValue, false, null, $value, $hasValue);
+                                $parameter = $this->shorthandParse($tokens, $operator === '=>' ? $value : $contextValue, false, null, $value, $hasValue);
                             }
                         }
-                        $value = $operator === '$' ? $parameter : $this->chequerOperator($operator, $value, $parameter);
+                        $value = $operator === '=>' ? $parameter : $this->chequerOperator($operator, $value, $parameter);
                         $hasValue = true;
                     }
                 } catch (\Chequer\ParseBreakException $e) {

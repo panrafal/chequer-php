@@ -35,7 +35,7 @@ class ChequerExamplesTest extends PHPUnit_Framework_TestCase {
         if (PHP_VERSION_ID < 50400) $this->markTestSkipped('PHP 5.4 required');
         
         $files = new FilesystemIterator(dirname(__DIR__));
-        $files = new CallbackFilterIterator($files, new Chequer('$ @file() $(.extension $in(php, html) && (.size > 1024))'));
+        $files = new CallbackFilterIterator($files, new Chequer('$ @file() => (.extension $in(php, html) && (.size > 1024))'));
         $this->assertContains('Chequer.php', array_map('basename', array_keys(iterator_to_array($files))));
         
     }
