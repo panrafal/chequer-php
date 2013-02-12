@@ -140,6 +140,7 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             array('1 2, 3, four:4, five:5, (six:6), four:FOUR', array(
                 '1 2', 3, 'four' => 'FOUR', 'five' => 5, 4 => array('six' => 6)
                 )),
+            array('(one:1, two:2).two', 2),
             
 //            array('(@time.year):"Now!"', array(intval(strftime('%Y')) => 'Now!')),
 //            array('year @time.year:"Now!"', array('year', intval(strftime('%Y')) => 'Now!')), // unsecured whitespace!

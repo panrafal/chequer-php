@@ -225,12 +225,14 @@ The rules of shorthand are:
 * Floating point **numbers** less than 1 should be prefixed with `0`. This is ok: `$< 0.1`, 
   this is **not**: `$< .1`. Moreover, the second example will work, because you will fetch a second
   digit from the number (equivalent to `$value[1]`).
-* To use **current** `value` use single dot `.`. To access the subkeys use the [dot notation][dotnotation]:
+* To use **current** `value` use single dot `.`. To access the subkeys use the [dot notation][dotnotation].
+  You can also use dot notation on group results in brackets.
 
   ```php
   '$ .' = value
   '$ .key.subkey' = value['key']['subkey']
   '$ .method().key' = calls value.method()['key']
+  '$ (one:1, two:2).two' = ['one' => 1, 'two' => 2]['two']
   ```
 * The **strings** can be unquoted if they don't contain any special characters. 
   These words will be converted into their respectable types:

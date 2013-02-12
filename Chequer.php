@@ -468,6 +468,10 @@ namespace {
                     $tokens->getToken();
                     // evaluate
                     $valueItem = $this->shorthandParse($tokens, $contextValue);
+                    if ($tokens->current === '.') {
+                        $subkeyValue = $valueItem;
+                        goto extractSubkey;
+                    }
                 } elseif ((isset(self::$shcOperator[$char]) && ($char !== '-' || !is_numeric($tokens->current))) 
                         || $char === ',' || $char === ':') {
                     // an operator, array or hashmap
@@ -485,6 +489,7 @@ namespace {
                 } elseif ($char === '.' || $char === '@') {
                     // subkeys!
                     $subkeyValue = $contextValue;
+                    extractSubkey:
                     do {
                         $subkey = $tokens->getToken(self::$shcStopchar);
                     
