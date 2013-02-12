@@ -105,7 +105,7 @@ $array = array_filter($array, new Chequer(['$between' => [2, 5]]))
 This will iterate through files with 'php' or 'html' extensions, that are older than one day.
 ```php
 $files = new FilesystemIterator(dirname(__DIR__));
-$files = new CallbackFilterIterator($files, new Chequer('$ @file $(.extension $in(php, html) && .mtime < -1 day)'));
+$files = new CallbackFilterIterator($files, new Chequer('$ @file() $(.extension $in(php, html) && (.mtime < -1 day))'));
 foreach($files as $file) {}
 ```
 
