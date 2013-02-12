@@ -336,6 +336,8 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
     
     // done
     public function testPropertyClosure() {
+        if (PHP_VERSION_ID < 50400) $this->markTestSkipped('PHP 5.4 required');
+        
         $this->obj->_addProperty('test', $this->closureProperty);
         $this->assertTrue($this->obj->_isCallable('test'), 'Should be callable as ->test()!');
 
@@ -381,6 +383,8 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
 
     // done
     public function testAutoGetterSetterClosure() {
+        if (PHP_VERSION_ID < 50400) $this->markTestSkipped('PHP 5.4 required');
+
         $this->obj->get_test = $this->obj->set_test = $this->closureProperty;
         
         $this->assertTrue($this->obj->_isCallable('get_test'));
@@ -394,6 +398,8 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
 
     // done
     public function testAutoAllGetterSetter() {
+        if (PHP_VERSION_ID < 50400) $this->markTestSkipped('PHP 5.4 required');
+        
         // isset
         $this->assertTrue(isset($this->obj->objectAllGetter));
         
@@ -433,6 +439,8 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
     
     // done
     public function testStrings() {
+        if (PHP_VERSION_ID < 50400) $this->markTestSkipped('PHP 5.4 required');
+        
         $this->assertEquals('parentToString', (string)$this->obj);
         
         $this->obj->__toString = function() { 
@@ -472,7 +480,9 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $this->assertTrue($this->obj->_isCallable('testClosure'));
         
         $this->assertEquals('declaredMethod', $this->obj->testMethod());
-        $this->assertTrue($this->obj === $this->obj->testClosure());
+        if (PHP_VERSION_ID >= 50400) {
+            $this->assertTrue($this->obj === $this->obj->testClosure());
+        }
         
         $this->assertEquals('test', $this->obj->testMethod('test'));
         $this->assertEquals('test', $this->obj->testClosure('test'));
@@ -480,6 +490,8 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
     
     // done
     public function testCallClosure() {
+        if (PHP_VERSION_ID < 50400) $this->markTestSkipped('PHP 5.4 required');
+        
         $this->obj->test = $this->closure;
 
         $this->assertTrue($this->obj->_isCallable('test'));
@@ -539,20 +551,25 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $this->referencesTest('parentDeclaredProperty');        
         $this->referencesTest('parentGet');        
         
-        $this->obj->_addProperty('closureProperty', $this->closureProperty);
-        $this->referencesTest('closureProperty');
+        if (PHP_VERSION_ID >= 50400) {
+            $this->obj->_addProperty('closureProperty', $this->closureProperty);
+            $this->referencesTest('closureProperty');
+        }
         
         $this->obj->_addGetter('callableGetterSetter', array('DynamicObjectTest', 'staticGetterSetter'));
         $this->obj->_addSetter('callableGetterSetter', array('DynamicObjectTest', 'staticGetterSetter'));
         $this->referencesTest('callableGetterSetter');
 
-        $this->obj->get_closureAutoProperty = $this->obj->set_closureAutoProperty = $this->closureProperty;
-        $this->referencesTest('closureAutoProperty');
+        if (PHP_VERSION_ID >= 50400) {
+            $this->obj->get_closureAutoProperty = $this->obj->set_closureAutoProperty = $this->closureProperty;
+            $this->referencesTest('closureAutoProperty');
+        }
         
     }
  
     
     public function testUsecase_createClass() {
+        if (PHP_VERSION_ID < 50400) $this->markTestSkipped('PHP 5.4 required');
         
         // create a class with a getter, one method and one property
         $myClass = new DynamicObject();
@@ -581,8 +598,8 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $file->getSize();
         
         $superFile = new DynamicObject($file);
-        $superFile->getSize = function() {
-            return $this->_getParentObject()->getSize() * 1000;
+        $superFile->getSize = function() use ($file) {
+            return $file->getSize() * 1000;
         };
         
 //        echo 'Whoa! ' . $superFile->getFilename() . ' is somewhat bigger! It has ' . $superFile->getSize();

@@ -6,7 +6,7 @@ require_once __DIR__ . '/../Chequer/DynamicChequerObject.php';
 require_once __DIR__ . '/../Chequer/File.php';
 require_once __DIR__ . '/../Chequer/Time.php';
 
-class TimeTest extends PHPUnit_Framework_TestCase {
+class FileTest extends PHPUnit_Framework_TestCase {
 
     /** @dataProvider fileProvider */
     public function testFile($fileobject) {

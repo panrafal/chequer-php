@@ -65,7 +65,7 @@ class ChequerTypecastsTest extends PHPUnit_Framework_TestCase {
             'time-specific-interval' => array(true, '$ @time(1 minute) = 60'),
             'time-specific-interval-conversion' => array(true, '$ @time(1 minute) = 1 minute'),
             'time-value' => array(true, '$ @time() = "2005-10-15"', '2005-10-15'),
-            'time-math' => array(new Chequer\Time('-1 day'), '$ @time - 1 day'),
+            'time-math' => array(new Chequer\Time('2012-01-01 00:00:00'), '$ @time("2012-01-02 00:00:00") - 1 day'),
             'time-cmp' => array(true, '$ @time - "1 day" > @time(-1 week)'),
             'time-abs' => array(true, '$ (@time(-2 minutes) - @time).abs > 60 seconds'),
             

@@ -9,9 +9,11 @@ class TimeTest extends PHPUnit_Framework_TestCase {
 
     /** @dataProvider timeProvider */
     public function testTime($timeobject, $now = null, $reference = null) {
+        $unixTime = time(); // use single unix-time instance...
         if ($reference === null) {
             if ($now !== null) throw new Exception("Provide the reference for $now");
-            $reference = strtotime((string)$timeobject);
+            $reference = strtotime((string)$timeobject, $unixTime);
+            if ($now === null) $now = $unixTime;
         }
         $time = new Chequer\Time($timeobject, $now);
         
@@ -30,7 +32,6 @@ class TimeTest extends PHPUnit_Framework_TestCase {
     
     public function timeProvider() {
         $array = array(
-            array(null, null, time()),
             array('now'),
             array('-1 month'),
             array('+1 month'),
@@ -51,6 +52,16 @@ class TimeTest extends PHPUnit_Framework_TestCase {
             else $result[$i] = $item;
         }
         return $result;
+    }
+    
+    public function testConstructor() {
+        $time = time();
+        $this->assertEquals(strftime('%Y'), Chequer\Time::create(null, null)->year);
+        $this->assertEquals(strftime('%Y'), Chequer\Time::create(null, false)->year);
+        $this->assertEquals(strftime('%Y'), Chequer\Time::create(null, true)->year);
+        $this->assertEquals(0, Chequer\Time::create(null, 0)->unixtime);
+        $this->assertEquals($time, Chequer\Time::create(null, $time)->unixtime);
+        $this->assertEquals($time, Chequer\Time::create('+0 seconds', $time)->unixtime);
     }
     
     public function testAdd() {
