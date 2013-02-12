@@ -68,10 +68,11 @@ class Time extends DynamicChequerObject {
         if ($now !== null) {
             $now = self::anythingToTime($now);
         }
+        if ($time === null || $time === false || $time === true) $time = 'now';
         if (is_int($time)) {
             return $time;
         } if (is_string($time)) {
-            if ((int)$time == $time) {
+            if ((string)((int)$time) == $time) {
                 return (int)$time;
             } else {
                 if ($now === null && preg_match('/^\d+ (sec|seconds?|min|minutes?|hours?|days?|fortnight|forthnight|months?|years?|weeks?)\b/', $time)) {
@@ -94,7 +95,7 @@ class Time extends DynamicChequerObject {
         return new Time($time, $now);
     }
     
-    function __construct($time, $now = null) {
+    function __construct($time = null, $now = null) {
         $this->unix = self::anythingToTime($time, $now);
         if (!is_object($time)) $time = null;
         parent::__construct($time);
@@ -116,16 +117,28 @@ class Time extends DynamicChequerObject {
         return parent::chequerOperator($operator, $value, $rule, $caller);
     }
 
+    /** @return Time */
+    public function add($time) {
+        $time = self::create($time);
+        return Time($this->unix + $time->unix);
+    }
+
+    /** @return Time */
+    public function sub($time) {
+        $time = self::create($time);
+        return Time($this->unix - $time->unix);
+    }
+    
     public function operator_add( $value, $rule, $caller ) {
         $value = self::create($value);
         $rule = self::create($rule);
-        return new Time($value->unix + $value->unix);
+        return $value->add($rule);
     }    
 
     public function operator_sub( $value, $rule, $caller ) {
         $value = self::create($value);
         $rule = self::create($rule);
-        return new Time($value->unix - $value->unix);
+        return $value->sub($rule);
     }    
 
     
