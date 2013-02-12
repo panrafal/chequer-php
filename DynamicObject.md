@@ -218,6 +218,34 @@ echo $o->foo;
 echo $o->get_foo();
 ```
 
+
+------------------------------------------------------
+Note on PHP 5.3
+---------------
+
+As this class uses Closure::bindTo, it's not entirely compatible with PHP5.3. However you can successfully
+use it in >=5.3 environment if you stick to these simple rules:
+
+* Don't use `$this` in closures at all. It's easy on 5.3, as it's not supported. If you need a reference 
+  to the object, pass it with `use`:
+
+  ```php
+    $obj = new DynamicObject();
+    $obj->foo = function() use ($obj) {
+        return $obj->bar;
+    };
+  ```
+* If you need the object at call time, because you want to create generic closures, pass the closure 
+  as an array to `_setMethod`, `_setGetter`, ... This way you will always get the `$object` as a first
+  argument - just like with callables.
+
+  ```php
+    $obj = new DynamicObject();
+    $obj->_setMethod('foo', array(function($self) {
+        return $self->bar;
+    }));
+  ```
+
 ------------------------------------------------------
 
 **DynamicObject** was brought to you by [Rafał Lindemann](http://www.stamina.pl/).
