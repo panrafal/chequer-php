@@ -63,6 +63,10 @@ class TimeTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals(0, Chequer\Time::create('now')->sub('now')->unixtime);
         $this->assertEquals(60, Chequer\Time::create('+1 minute')->sub('now')->unixtime);
     }
+    
+    public function testAbs() {
+        $this->assertEquals(60, Chequer\Time::create('now')->sub('+1 minute')->abs->unixtime);
+    }
 
     public function testFormat() {
         $this->assertEquals(strftime('%Y-%m-%d %H:%M:%S'), Chequer\Time::create('now')->format());

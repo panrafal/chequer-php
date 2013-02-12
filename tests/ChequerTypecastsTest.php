@@ -67,6 +67,30 @@ class ChequerTypecastsTest extends PHPUnit_Framework_TestCase {
             'time-value' => array(true, '$ @time() = "2005-10-15"', '2005-10-15'),
             'time-math' => array(new Chequer\Time('-1 day'), '$ @time - 1 day'),
             'time-cmp' => array(true, '$ @time - "1 day" > @time(-1 week)'),
+            'time-abs' => array(true, '$ (@time(-2 minutes) - @time).abs > 60 seconds'),
+            
+            ), 1);
+    }     
+    
+
+
+    /**
+     * @dataProvider fileTypecastProvider
+     */
+    public function testFileTypecast( $expected, $rules, $data = null, $typecasts = null ) {
+        return $this->testGeneralTypecasts($expected, $rules, $data, $typecasts);
+    }    
+    
+    public function fileTypecastProvider() {
+        return self::providerResult(array(
+            array(getcwd(), '$ @file'),
+            array(__FILE__, '$ @file()', __FILE__),
+            array('php', '$ @file().ext', __FILE__),
+            array('ChequerTypecastsTest.php', '$ @file().name', __FILE__),
+            array('ChequerTypecastsTest.php', '$ @file("'.strtr(__FILE__, '\\', '/').'").name', false),
+            array(true, '$ @file().ctime > "2010-01-01"', __FILE__),
+            array(true, '$ @file().ctime < "+1 year"', __FILE__),
+            array(true, '$ @file().ctime - @time < "5 years"', __FILE__),
             ), 1);
     }     
     

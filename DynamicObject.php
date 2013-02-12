@@ -41,7 +41,7 @@ class DynamicObject {
     const OVERLOAD_ALL = '*ALL*';
     
     function __construct($parent = null) {
-        if ($parent && !is_object($parent)) throw new \InvalidArgumentException("Parrent should be an object!");
+        if ($parent && !is_object($parent)) throw new \InvalidArgumentException("Parent should be an object!");
         $this->__parent = $parent;
     }
 

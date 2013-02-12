@@ -444,6 +444,9 @@ The currently available operators are:
 * `$check` => `callable`
 
   matches if callable($value) returns TRUE
+* `$abs` => `value`
+
+  Returns absolute value
 * `$size` => `query`
 
   checks the size of array or string using the `query`
@@ -568,9 +571,89 @@ foreach($files as $file) {
 
 ```
 
-#### Available typecasts:
-* `@file`
-* `@time`
+### Available typecasts:
+
+#### @file
+[typecast-file]: #-file
+Treats the value as a file, giving access to additional information. In addition to standard `SplFileinfo`
+methods, you can use many nice properties.  This is the same as using `Chequer\File` class.
+
+You can use current value, or provide your own:
+```php
+    '$ @file().path' = path of the currently checked value
+    '$ @file("somefile.txt").mtime > -7 days' = TRUE if somefile.txt was modified in last 7 days ([see @time][typecast-time])
+    '$ @file().xpath ~ "somedir/.*\.txt$"' = cross-system safe way to check for paths
+```
+
+Properties:
+* `size` (`int`) -  File size in bytes
+* `atime` (`Time`) -  Access time as Chequer\Time object
+* `mtime` (`Time`) -  Mod time as Chequer\Time object
+* `ctime` (`Time`) -  Create time as Chequer\Time object
+* `extension` (`string`) - 
+* `ext` (`string`) -  Alias for extension
+* `name` (`string`) -  File name, without directory
+* `path` (`string`) -  Full file path
+* `dir` (`string`) -  Directory name, without file name
+* `realpath` (`string`) -  Absolute file path
+* `xpath` (`string`) -  Full file path normalized as unix path (always forward slashed '/', no drive letter)
+* `xdir` (`string`) -  Directory name, without file name - normalized as unix path
+* `xrealpath` (`string`) -  Absolute file path normalized as unix path
+* `type` (`string`) -  Type of the file. Possible values are file, dir and link
+* `isdir` (`boolean`) - 
+* `isfile` (`boolean`) - 
+* `writeable` (`boolean`) - 
+* `readable` (`boolean`) - 
+* `executable` (`boolean`) - 
+* `exists` (`boolean`) -  TRUE if exists
+
+
+
+#### @time
+[typecast-time]: #-time
+Treats the value as time, giving you access to time-related information. This is the same as using `Chequer\Time` class.
+
+You can use current value, or provide your own. Supported formats are:
+- `60` | `-60` | `57462043` | ... - Unix timestamp in seconds as integer, or integer-like string
+- `2010-10-01` | `2010/01/10 15:00` | ... - Full dates. The same format as strtotime()
+- `-1 day` | `last thursday` | ... - Relative dates. The same formats as strtotime()
+- `1 day` | `20 seconds` | ... - Time intervals. Don't use '+' or '-'! These are reserved for relative dates!
+
+```php
+    '$ @time' - current system time
+    '$ @time()' - current value converted to time
+    '$ @time("2010-05-01")' - specific time
+    '$ @time("+1 day")' - tomorrow (note the '+')
+    '$ @time("1 minute")' - one day interval (60 seconds)
+    '$ @time("+1 day", .)' - relative time to the current value
+```
+
+It also overrides some of the operators, so any operation on time will also convert the other
+operator to time.
+
+```php
+    '$ @time + "1 day"' - tomorrow
+    '$ (@time() - @time).abs > 60 seconds' - checks if the absolute difference between value's time and system time is more than 60 seconds
+```
+
+Properties:
+* `string` (`string`) - Whole date as "YYYY-MM-DD HH:MM:SS" the same as simply `@time()`
+* `date` (`string`) - Date portion as YYYY-MM-DD
+* `time` (`string`) - Time portion as HH:MM:SS
+* `year` (`int`) - 
+* `month` (`int`) -  
+* `day` (`int`) - 
+* `week` (`int`) - year's week number
+* `weekday` (`int`) - weekday, 1 is Monday, 7 is Sunday
+* `hour` (`int`) - 
+* `minute` (`int`) - 
+* `second` (`int`) - 
+* `unixtime` (`int`) - time in seconds since Unix epoch
+* `abs` (`Time`) - absolute time for intervals
+
+Methods:
+* `strftime`(`format`) - Formats the time using strftime() format
+* `format`(`format`) - Formats the time using date() format
 
 ### Extending
 

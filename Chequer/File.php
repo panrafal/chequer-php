@@ -24,16 +24,16 @@ use SplFileObject;
  * object, but a string - SplFileinfo methods will be accessible.
  * 
  * @property-read int $size File size in bytes
- * @property-read Time $atime Access time
- * @property-read Time $mtime Mod time
- * @property-read Time $ctime Create time
+ * @property-read Time $atime Access time as Chequer\Time object
+ * @property-read Time $mtime Mod time as Chequer\Time object
+ * @property-read Time $ctime Create time as Chequer\Time object
  * @property-read string $extension
  * @property-read string $ext Alias for extension
  * @property-read string $name File name, without directory
  * @property-read string $path Full file path
  * @property-read string $dir Directory name, without file name
  * @property-read string $realpath Absolute file path
- * @property-read string $xpath Full file path normalized as unix path
+ * @property-read string $xpath Full file path normalized as unix path (always forward slashed '/', no drive letter)
  * @property-read string $xdir Directory name, without file name - normalized as unix path
  * @property-read string $xrealpath Absolute file path normalized as unix path
  * @property-read string $type Type of the file. Possible values are file, dir and link
@@ -42,6 +42,7 @@ use SplFileObject;
  * @property-read boolean $writeable
  * @property-read boolean $readable
  * @property-read boolean $executable
+ * @property-read boolean $exists TRUE if exists
  * 
  * @method SplFileObject openFile ($open_mode = r, $use_include_path = false , $context = NULL )
  */
@@ -52,12 +53,13 @@ class File extends DynamicObject {
     /** Getters are predeclared for speed. To override them use setGetter().
      */
     protected $__getters = array(
+        'exists' => 'get_exists',
         'size' => 'get_size',
         'atime' => 'get_atime',
         'mtime' => 'get_mtime',
         'ctime' => 'get_ctime',
         'extension' => 'get_extension',
-        'ext' => 'get_ext',
+        'ext' => 'get_extension',
         'name' => 'get_name',
         'path' => 'get_path',
         'dir' => 'get_dir',
@@ -98,7 +100,7 @@ class File extends DynamicObject {
             // maybe the __toString() will give us the path?
             $this->filepath = (string)$file;
         }
-        parent::__construct($file);
+        parent::__construct(is_object($file) ? $file : null);
     }
 
     public function __call( $name, $arguments ) {

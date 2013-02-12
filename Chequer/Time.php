@@ -32,17 +32,19 @@ class Time extends DynamicChequerObject {
     
     /** Getters are predeclared for speed. To override them use setGetter().
      * 
-     * @property-read string $date
-     * @property-read string $time
+     * @property-read string $string - the same as (string)$time
+     * @property-read string $date - Date portion as YYYY-MM-DD
+     * @property-read string $time - Time portion as HH:MM:SS
      * @property-read int $year
      * @property-read int $month 
      * @property-read int $day
-     * @property-read int $week
-     * @property-read int $weekday
+     * @property-read int $week - year's week number
+     * @property-read int $weekday - weekday, 1 is Monday, 7 is Sunday
      * @property-read int $hour
      * @property-read int $minute
      * @property-read int $second
-     * @property-read int $unixtime
+     * @property-read int $unixtime - time in seconds since Unix epoch
+     * @property-read Time $abs - absolute time (for intervals)
      */
     protected $__getters = array(
         'date' => 'get_date',
@@ -60,6 +62,8 @@ class Time extends DynamicChequerObject {
         'string' => 'strftime',
         'strftime' => 'strftime',
         'format' => 'format',
+        
+        'abs' => 'abs',
     );
 
     protected $__methods = array(
@@ -132,6 +136,10 @@ class Time extends DynamicChequerObject {
         $time = self::create($time);
         return new self($this->unix - $time->unix);
     }
+
+    public function abs( ) {
+        return new self(abs($this->unix));
+    }
     
     public function operator_add( $value, $rule, $caller ) {
         $value = self::create($value);
@@ -145,6 +153,10 @@ class Time extends DynamicChequerObject {
         return $value->sub($rule);
     }    
 
+    public function operator_abs( $value, $rule, $caller ) {
+        $rule = self::create($rule);
+        return $rule->abs();
+    }
     
     public function get_unixtime() {
         return $this->unix;

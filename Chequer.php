@@ -892,6 +892,9 @@ namespace {
                 return null;
         }        
  
+        protected function operator_abs( $value, $operand ) {
+            return abs($operand);
+        }        
         
         
         // -------------------------- Typecasts --------------------------
