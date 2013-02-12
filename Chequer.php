@@ -258,6 +258,11 @@ namespace {
             return $this->check($value);
         }
 
+        
+        public function __toString() {
+            return is_string($this->query) ? $this->query : json_encode($this->query, 
+                    PHP_VERSION_ID > 50400 ? JSON_UNESCAPED_SLASHES : 0);
+        }
 
         /** Checks the value against the instance's query
          * 
