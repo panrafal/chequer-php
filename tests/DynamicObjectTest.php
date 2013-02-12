@@ -542,8 +542,8 @@ class DynamicObjectTest extends PHPUnit_Framework_TestCase {
         $this->obj->_addProperty('closureProperty', $this->closureProperty);
         $this->referencesTest('closureProperty');
         
-        $this->obj->_addGetter('callableGetterSetter', ['DynamicObjectTest', 'staticGetterSetter']);
-        $this->obj->_addSetter('callableGetterSetter', ['DynamicObjectTest', 'staticGetterSetter']);
+        $this->obj->_addGetter('callableGetterSetter', array('DynamicObjectTest', 'staticGetterSetter'));
+        $this->obj->_addSetter('callableGetterSetter', array('DynamicObjectTest', 'staticGetterSetter'));
         $this->referencesTest('callableGetterSetter');
 
         $this->obj->get_closureAutoProperty = $this->obj->set_closureAutoProperty = $this->closureProperty;
