@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../Chequer.php';
 
+
 class ChequerTest_Object {
     public $property = 'property';
     
@@ -291,43 +292,7 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
     }
 
 
-    
-    /**
-     * @dataProvider checkTypecastsProvider
-     */
-    public function testCheckTypecasts( $expected, $data, $typecasts, $rules ) {
-        if ($expected instanceof Exception) {
-            $this->setExpectedException(get_class($expected));
-            $expected = 'Should throw exception!';
-        }
-        $chequer = $this->buildChequer($rules);
-        $chequer->addTypecasts($typecasts);
-        $this->assertEquals($expected, $chequer->check($data));
-    }
-
-    
-    public function checkTypecastsProvider() {
-        $closure = function($a = null) {return $a . 'bar';};
-        $closureArray = function($a = null) {return array('foo' => 'bar', 'bar' => $a);};
-        return array(
-            'value' => array('foo', false, array('test' => 'foo'), '$ @test'),
-            'notcallable' => array(new Exception, false, array('test' => 'foo'), '$ @test()'),
-            'closure-use' => array('bar', 'foo', array('test' => $closure), '$ @test'),
-            'closure-typecast' => array(true, 'foo', array('test' => $closure), '$ .@test() = foobar'),
-            'closurearray-use' => array(true, 
-                    'foo', 
-                    array('test' => $closureArray), 
-                    array('$' => 'AND', '$ @test.foo = bar', array('@test.bar' => null))
-                ),
-            'closurearray-typecast' => array(true, 
-                    'foo', 
-                    array('test' => $closureArray), 
-                    array('$' => 'AND', '$ @test().foo = bar', '$ @test().bar = foo')
-                ),
-            );
-    }    
-    
-    
+   
     public function testCheckEnvironment() {
         $_ENV['TEST'] = 123;
         $this->assertTrue(Chequer::checkEnvironment(array(

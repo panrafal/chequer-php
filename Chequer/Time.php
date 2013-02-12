@@ -49,13 +49,17 @@ class Time extends DynamicChequerObject {
         'day' => 'get_day',
         'hour' => 'get_hour',
         'minute' => 'get_minute',
-        'month ' => 'get_month ',
+        'month' => 'get_month',
         'second' => 'get_second',
         'time' => 'get_time',
         'unixtime' => 'get_unixtime',
         'week' => 'get_week',
         'weekday' => 'get_weekday',
         'year' => 'get_year',
+        
+        'string' => 'strftime',
+        'strftime' => 'strftime',
+        'format' => 'format',
     );
 
     protected $__methods = array(
@@ -90,7 +94,7 @@ class Time extends DynamicChequerObject {
     }
 
     /** @return Time */
-    public static function create($time, $now = null) {
+    public static function create($time = null, $now = null) {
         if ($time instanceof Time) return $time;
         return new Time($time, $now);
     }
@@ -110,7 +114,7 @@ class Time extends DynamicChequerObject {
                     || (is_object($rule) && method_exists($rule, '__toString'))
             )) {
                 $time = new Time($rule);
-                if ($time->unix) $rule = $time;
+                if ($time->unix !== false) $rule = $time;
             }
         }
         
@@ -120,13 +124,13 @@ class Time extends DynamicChequerObject {
     /** @return Time */
     public function add($time) {
         $time = self::create($time);
-        return Time($this->unix + $time->unix);
+        return new self($this->unix + $time->unix);
     }
 
     /** @return Time */
     public function sub($time) {
         $time = self::create($time);
-        return Time($this->unix - $time->unix);
+        return new self($this->unix - $time->unix);
     }
     
     public function operator_add( $value, $rule, $caller ) {
@@ -191,7 +195,7 @@ class Time extends DynamicChequerObject {
         return strftime($format, $this->unix);
     }
     
-    public function format($format) {
+    public function format($format = 'Y-m-d H:i:s') {
         return date($format, $this->unix);
     }
 
