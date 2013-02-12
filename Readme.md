@@ -255,6 +255,16 @@ The rules of shorthand are:
   '$ some( .subkey) "te""xt"' = 'someSUBKEYtext'
   '$ 1 "+" 1 + "=" 2' = '1+ 1= 2'
   ```
+* You generally should separate operators and values with a whitespace. At least for readability sake.
+  If not, remember to always separate operators themselves.
+
+  ```php
+  '1+1=2' // is ok
+  '1-0.5=0.5' // is ok
+  '1+-0.5=1.5' // is NOT ok! +- will be treated as one operator
+  '1+ -0.5=1.5' // this IS ok
+  ```
+
 * Concatenation of types different then strings is undefined. Currently
 numbers will be treated as strings, FALSE is not represented, TRUE is 1 and
 arrays are changed to '(Array)'. This may change, so don't rely on it
