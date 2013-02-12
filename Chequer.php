@@ -397,7 +397,7 @@ namespace {
         
         protected function shorthandQueryRun($value, $query) {
             // split query into tokens
-            $tokens = new \Chequer\Tokenizer($query, '/\$[a-z!~&^*\-+=\/|%<>]+|[!~&\^*\-+=\/|%<>]{1,3}|(?<!\.)\d+\.\d+|\d+|[a-z]+|\s+|./i');
+            $tokens = new \Chequer\Tokenizer($query, '/\$[a-z!~&^*\-+=\/|%<>]+|(?<![.@\d])-?(?:\d+\.)?\d+|[!~&\^*\-+=\/|%<>]{1,3}|\d+|[a-z]+|\s+|./i');
             $result = $this->shorthandParse($tokens, $value);
             if ($tokens->current !== null) throw new \Chequer\ParseException("Query finished prematurely!");
             return $result;
@@ -436,7 +436,8 @@ namespace {
                     $tokens->getToken();
                     // evaluate
                     $valueItem = $this->shorthandParse($tokens, $contextValue);
-                } elseif (isset(self::$shcOperator[$char]) || $char === ',' || $char === ':') {
+                } elseif ((isset(self::$shcOperator[$char]) && ($char !== '-' || !is_numeric($tokens->current))) 
+                        || $char === ',' || $char === ':') {
                     // an operator, array or hashmap
                     return $collected;
                 } elseif (isset(self::$shcWhitespace[$char])) {

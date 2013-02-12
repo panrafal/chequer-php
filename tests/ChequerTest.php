@@ -172,6 +172,9 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             array('1  +  1 = 2'),
             array('1+(2*2) = 5'),
             array('1+2*2 = 6'),
+            array('2-1 = 1'),
+            array('2-0.5=1.5'),
+            array('2+ -0.5=1.5'),
             array('5+(5+(2*2.5))+5*4 = 80'),
           
             // escaping
