@@ -65,12 +65,21 @@ class DynamicObject {
         return $this->__methods;
     }
 
+    protected function _prepareClosure($group, $name, $bind, &$closure = null) {
+        if (PHP_VERSION_ID < 50300) return;
+        if ($bind) {
+            $this->__closures[$group][$name] = true;
+            if ($closure) $closure = $closure->bindTo($this, $this);
+        } else {
+            unset($this->__closures[$group][$name]);
+        }
+    }
 
     /** 
      * @param $property Property name or self::OVERLOAD_PREFIX to set getter prefix (eg. 'get_')
      * @return self */
-    public function _addGetter($property, $callback) {
-        if ($callback instanceof Closure) $callback = $callback->bindTo($this, $this);
+    public function _addGetter($property, $callback, $bind = true) {
+        if ($callback instanceof Closure) $this->_prepareClosure('getter', $property, $bind, $callback);
         $this->__getters[$property] = $callback;
         return $this;
     }
@@ -79,29 +88,37 @@ class DynamicObject {
     /** 
      * @param $property Property name or self::OVERLOAD_PREFIX to set setter prefix (eg. 'get_')
      * @return self */
-    public function _addSetter($property, $callback) {
-        if ($callback instanceof Closure) $callback = $callback->bindTo($this, $this);
+    public function _addSetter($property, $callback, $bind = true) {
+        if ($callback instanceof Closure) $this->_prepareClosure('setter', $property, $bind, $callback);
         $this->__setters[$property] = $callback;
         return $this;
     }
 
 
     /** @return self */
-    public function _addMethod($property, $callback) {
-        if ($callback instanceof Closure) $callback = $callback->bindTo($this, $this);
+    public function _addMethod($property, $callback, $bind = true) {
+        if ($callback instanceof Closure) $this->_prepareClosure('method', $property, $bind, $callback);
         $this->__methods[$property] = $callback;
         return $this;
     }
 
 
     /** @return self */
-    public function _addProperty($property, $callback, $setMethod = true) {
-        if ($callback instanceof Closure) $callback = $callback->bindTo($this, $this);
+    public function _addProperty($property, $callback, $setMethod = true, $bind = true) {
+        if ($callback instanceof Closure) {
+            $this->_prepareClosure('getter', $property, $bind, $callback);
+            $this->_prepareClosure('setter', $property, $bind);
+            if ($setMethod) $this->_prepareClosure('method', $property, $bind);
+        }
         $this->__getters[$property] = $this->__setters[$property] = $callback;
         if ($setMethod) $this->__methods[$property] = $callback;
         return $this;
     }
 
+    /** The same as setting the Closure as property, but with controling the binding to $this */
+    public function _setClosure($property, Closure $closure, $bind = true) {
+        return $this->_setProperty($property, $closure, $bind);
+    }
 
     /** Returns TRUE if $this->property() is callable */
     public function _isCallable($name) {
@@ -126,6 +143,7 @@ class DynamicObject {
         if ($method instanceof Closure) return call_user_func_array($method, $arguments);
         if (is_string($method)) return call_user_func_array(array($this, $method), $arguments);
         array_unshift($arguments, $this);
+        if (is_array($method) && $method[0] instanceof Closure) return call_user_func_array($method[0], $arguments);
         return call_user_func_array($method, $arguments);
     }
 
@@ -193,13 +211,13 @@ class DynamicObject {
         return ($this->__parent && isset($this->__parent->{$name}));
     }
 
-
     public function __set($name, $value) {
-        if ($value instanceof Closure) {
-            $this->__closures[$name] = true;
-            $value = $value->bindTo($this, $this);
-        }
-
+        return $this->_setProperty($name, $value);
+    }
+    
+    protected function _setProperty($name, $value, $bindClosures = true) {
+        if ($value instanceof Closure) $this->_prepareClosure('property', $name, $bindClosures, $value);
+        
         if (isset($this->__setters[$name])) {
             return $this->_callMethodDeclaration($this->__setters[$name], array($value));
         }
@@ -258,26 +276,28 @@ class DynamicObject {
     
     public function __clone() {
         // we need to rebind closures...
-        foreach($this->__getters as &$func) {
-            if ($func instanceof Closure) $func = $func->bindTo($this, $this);
+        foreach($this->__getters as $name => &$func) {
+            if ($func instanceof Closure && isset($this->__closures["getter"][$name])) $func = $func->bindTo($this, $this);
         }
-        foreach($this->__setters as &$func) {
-            if ($func instanceof Closure) $func = $func->bindTo($this, $this);
+        foreach($this->__setters as $name => &$func) {
+            if ($func instanceof Closure && isset($this->__closures["setter"][$name])) $func = $func->bindTo($this, $this);
         }
-        foreach($this->__methods as &$func) {
-            if ($func instanceof Closure) $func = $func->bindTo($this, $this);
+        foreach($this->__methods as $name => &$func) {
+            if ($func instanceof Closure && isset($this->__closures["method"][$name])) $func = $func->bindTo($this, $this);
         }
         
         // reset the list of closures...
         $closures = $this->__closures;
         $this->__closures = array();
         
-        // and try to rebind them
-        foreach($closures as $name => $enabled) {
-            if (!$enabled) continue;
-            if (($closure = $this->{$name}) instanceof Closure) {
-                // rebind and assign again
-                $this->{$name} = $closure->bindTo($this, $this);
+        if (isset($closures['property'])) {
+            // and try to rebind them
+            foreach($closures['property'] as $name => $enabled) {
+                if (!$enabled) continue;
+                if (($closure = $this->{$name}) instanceof Closure) {
+                    // rebind and assign again
+                    $this->{$name} = $closure->bindTo($this, $this);
+                }
             }
         }
     }
