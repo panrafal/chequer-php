@@ -243,9 +243,9 @@ The rules of shorthand are:
   them a lot :)
 * There is __no operator precedence__. Query is evaluated from _left_ to _right_.
   
-  This is __extremely important__ as every operation is done through operators. Including AND/OR constructs.<br/>
+  This is __extremely important__ as every operation is done through operators. Including AND/OR constructs!<br/>
   `$ 1 = 1 && 2 = 2` will evaluate like `$ ((1 = 1) && 2) = 2`<br/>
-  What you would want is rather this: `$ (1 = 1) && (2 = 2)`
+  What you would want is rather this: `$ (1 = 1) && (2 = 2)`.
 * You can **quote** the strings with either single or double quotes. You can escape the quotes
   by using backslash `\`. Both are valid: `'this "is" ok' "this 'is' ok two!"`.
 
@@ -253,7 +253,7 @@ The rules of shorthand are:
 * Floating point **numbers** less than 1 should be prefixed with `0`. This is ok: `$< 0.1`, 
   this is **not**: `$< .1`. Moreover, the second example will work, because you will fetch a second
   digit from the number (equivalent to `$value[1]`).
-* To use **current** `value` use single dot `.`. To access the subkeys use the [dot notation][dotnotation].
+* To use __current context `value`__ use single dot `.`. To access the subkeys use the [dot notation][dotnotation].
   You can also use dot notation on group results in brackets.
 
   ```php
@@ -261,6 +261,15 @@ The rules of shorthand are:
   '$ .key.subkey' = value['key']['subkey']
   '$ .method().key' = calls value.method()['key']
   '$ (one:1, two:2).two' = ['one' => 1, 'two' => 2]['two']
+  ```
+* To alter the `context value` you can use the `$()` operator. Everything inside brackets will refer to
+  the new value when using dot notation.
+
+  ```php
+    '$ foo $( . = foo )' - uses "foo" as a new context, so . = "foo" is true 
+    '$ (one:1, two:2) $ ( .two )' - passes array as the new context, so the result is 2
+    '$ @time() $ ((.year = 2013) && (.month = 10))' - passes the @time() object - you don't have to cast it twice!
+
   ```
 * The **strings** can be unquoted if they don't contain any special characters. 
   These words will be converted into their respectable types:

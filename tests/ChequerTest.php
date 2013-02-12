@@ -81,7 +81,6 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
     
     
     /**
-     * @group dev
      * @dataProvider checkShorthandProvider
      */
     public function testCheckShorthand( $query, $expected = true, $value = null ) {
@@ -206,7 +205,12 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
                 array(array("B" => "b"), "array", "B" => 2), 2),
             array('$ . > 1 ? (. > 2 ? C : (B:b)) : A, array, .>1?B:A : .>1?2:1', 
                 array("A", "array", "A" => 1), 1),
-            
+
+            // context change
+            array('foo $( . = foo )'),
+            array('foo $ . = foo && (. ~ foo)'),
+            array('(one:1, two:2)$( .two )', 2),
+            array('(one:., two:. + .)$( .two ) + .', 3, 1),
         );
         $result = array();
         $i = 1;

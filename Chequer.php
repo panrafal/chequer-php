@@ -356,6 +356,7 @@ namespace {
             if ($matchAll === null)
                     $matchAll = false === (isset($query[0]) && is_scalar($query[0]));
 
+            $result = null;
             try {
                 foreach ($query as $key => $rule) {
                     $result = null;
@@ -426,7 +427,7 @@ namespace {
 
             if (!is_array($value) && !is_object($value)) {
                 if ($this->strictMode) 
-                    throw new \Chequer\ParseException('Array or object required for key matching.');
+                    throw new \Chequer\ParseException("Array or object required for key matching on $key.");
                 else
                     return null;
             }
@@ -450,6 +451,8 @@ namespace {
                     }
                 }
             }
+            if ($this->strictMode) 
+                throw new \Chequer\ParseException("Subkey $key not found.");
             return null;
         }
 
@@ -622,6 +625,7 @@ namespace {
                         // ')' will be read after loop
                         break;
                     } elseif ($tokens->current === ',') {
+                        // array
                         if (!$allowKeys) return $value;
                         
                         $tokens->getToken();
@@ -671,17 +675,18 @@ namespace {
                             // full syntax, Read until whitespace
                             $operator = $tokens->getToken(self::$shcStopchar);
                         }
+                        
                         // collect the parameters
-                        if (!$this->shorthandCollectValues($tokens, $contextValue, $parameter)) {
+                        if (!$this->shorthandCollectValues($tokens, $operator === '$' ? $value : $contextValue, $parameter)) {
                             // another operator?
                             if ($tokens->current !== null && $tokens->current !== ')'
                                     && $tokens->current !== ',' && $tokens->current !== ':'
                                     && $tokens->current !== '?'
                             ) {
-                                $parameter = $this->shorthandParse($tokens, $contextValue, false, null, $value, $hasValue);
+                                $parameter = $this->shorthandParse($tokens, $operator === '$' ? $value : $contextValue, false, null, $value, $hasValue);
                             }
                         }
-                        $value = $this->chequerOperator($operator, $value, $parameter);
+                        $value = $operator === '$' ? $parameter : $this->chequerOperator($operator, $value, $parameter);
                         $hasValue = true;
                     }
                 } catch (\Chequer\ParseBreakException $e) {
