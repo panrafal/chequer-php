@@ -83,6 +83,9 @@ namespace {
                     
         }
 
+        public static function create( $query = false, $matchAll = null, $deepArrays = true ) {
+            return new self($query, $matchAll, $deepArrays);
+        }
 
         public function getQuery() {
             return $this->query;
@@ -235,7 +238,7 @@ namespace {
 
 
         public static function checkValue( $value, $query, $matchAll = null ) {
-            $ch = new static($query, $matchAll);
+            $ch = new self($query, $matchAll);
             return $ch->check($value);
         }
 
@@ -244,9 +247,9 @@ namespace {
          * @param $query Any non-string query will be queried traditionally. 
          * @return Chequer
          *  */
-        public static function shorthand($value, $query, $matchAll = null) {
+        public static function shorthand($query, $matchAll = null) {
             if (is_string($query) && $query && $query{0} !== '$') $query = '$ ' . $query;
-            return new static($value, $query, $matchAll = null);
+            return new self($query, $matchAll = null);
         }
         
 
@@ -263,6 +266,42 @@ namespace {
             return $this->query($value, $this->query, $matchAll === null ? $this->matchAll : $matchAll);
         }
 
+        /** Run the query for every element in the array or iterator and return the results.
+         * Non-numeric keys are preserved.
+         * 
+         * @param $filter If TRUE, results equal to NULL will not be included in the result.
+         */
+        public function walk($data, $filter = true) {
+            $results = array();
+            foreach($data as $key => $value) {
+                if (($result = $this->query($value, $this->query)) !== null || !$filter) {
+                    if (is_int($key)) {
+                        $results[] = $result;
+                    } else {
+                        $results[$key] = $result;
+                    }
+                }
+            }
+            return $results;
+        }
+        
+        /** Run the query for every element in the array or iterator and merge the results together.
+         * 
+         * Arrays are merged, scalars are pushed to the end, NULLs are discarded.
+         */
+        public function merge($data) {
+            $results = array();
+            foreach($data as $key => $value) {
+                if (($result = $this->query($value, $this->query)) !== null) {
+                    if (is_array($result)) {
+                        $results = array_merge($results, $result);
+                    } else {
+                        $results[] = $result;
+                    }
+                }
+            }
+            return $results;
+        }
         
         /** Checks the value against provided shorthand query.
          * @param $query Any non-string query will be queried traditionally. You don't have to prepend it with '$ '
