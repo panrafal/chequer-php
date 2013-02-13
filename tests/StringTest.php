@@ -6,8 +6,8 @@ require_once __DIR__ . '/../Chequer/String.php';
 
 class StringTest extends PHPUnit_Framework_TestCase {
 
-    /** @dataProvider fileProvider */
-    public function testFile($object) {
+    /** @dataProvider stringProvider */
+    public function testString($object) {
         $string = new Chequer\String($object);
         $reference = (string)$object;
         
@@ -24,7 +24,7 @@ class StringTest extends PHPUnit_Framework_TestCase {
         
     }
     
-    public function fileProvider() {
+    public function stringProvider() {
         $array = array(
             array('foobar'),
             array(''),
