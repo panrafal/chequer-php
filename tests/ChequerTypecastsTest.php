@@ -3,6 +3,7 @@
 require_once __DIR__ . '/ChequerTest.php';
 require_once __DIR__ . '/../DynamicObject.php';
 require_once __DIR__ . '/../Chequer/DynamicChequerObject.php';
+require_once __DIR__ . '/../Chequer/String.php';
 require_once __DIR__ . '/../Chequer/File.php';
 require_once __DIR__ . '/../Chequer/Time.php';
 
@@ -91,6 +92,26 @@ class ChequerTypecastsTest extends PHPUnit_Framework_TestCase {
             array(true, '$ @file().ctime > "2010-01-01"', __FILE__),
             array(true, '$ @file().ctime < "+1 year"', __FILE__),
             array(true, '$ @file().ctime - @time < "5 years"', __FILE__),
+            ), 1);
+    }     
+
+
+    /**
+     * @dataProvider stringTypecastProvider
+     */
+    public function testStringTypecast( $expected, $rules, $data = null, $typecasts = null ) {
+        return $this->testGeneralTypecasts($expected, $rules, $data, $typecasts);
+    }    
+    
+    public function stringTypecastProvider() {
+        return self::providerResult(array(
+            array("foo", '$ @string(foo)'),
+            array("foo", '$ @string()', "foo"),
+            array(true, '$ @string(foobar).substr(3) = bar'),
+            array(true, '$ @string(foobar).substr(0,3) = foo'),
+            array(true, '$ @string(foobar).substr(0,3).upper = FOO'),
+            array(true, '$ @string(foobar).match("~foo(bar)?~") => ( .1 = bar ? @string(.0).upper : nope ) = FOOBAR'),
+            array(true, '$ @string(foobaZ).match("~foo(bar)?~") => ( .1 = bar ? @string(.0).upper : nope ) = nope'),
             ), 1);
     }     
     

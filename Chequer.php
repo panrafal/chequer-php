@@ -964,6 +964,10 @@ namespace {
             return call_user_func_array(array('Chequer\Time', 'create'), $callArgs);
         }
         
+        protected function typecast_string($callArgs) {
+            return call_user_func_array(array('Chequer\String', 'create'), $callArgs);
+        }
+        
         
     }
 }

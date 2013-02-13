@@ -611,6 +611,30 @@ foreach($files as $file) {
 
 ### Available typecasts:
 
+#### @string
+[typecast-string]: #-string
+Treats the value as a string, giving access to string-related functions. Every function or property
+result in another string object, so you can chain calls together. This is the same as using `Chequer\String` class.
+
+```php
+    '$ @string(foobar).substr(0,3).upper' = 'FOO'
+```
+
+Properties:
+* `length`
+* `upper`
+* `lower`
+* `trim`
+
+Methods:
+* `toUpperCase`
+* `toLowerCase`
+* `trim`
+* `substr`(`start`, `length` = null)
+* `substring`(`start`, `end` = null)
+* `match`(`regular expression`) - returns array of matches or `null`
+* `replace`(`search` | `regular expression`, `replacement`)
+
 #### @file
 [typecast-file]: #-file
 Treats the value as a file, giving access to additional information. In addition to standard `SplFileinfo`

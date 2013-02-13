@@ -44,6 +44,7 @@ class Time extends DynamicChequerObject {
      * @property-read int $minute
      * @property-read int $second
      * @property-read int $unixtime - time in seconds since Unix epoch
+     * @property-read int $value - alias for unixtime
      * @property-read Time $abs - absolute time (for intervals)
      */
     protected $__getters = array(
@@ -55,6 +56,7 @@ class Time extends DynamicChequerObject {
         'second' => 'get_second',
         'time' => 'get_time',
         'unixtime' => 'get_unixtime',
+        'value' => 'get_unixtime',
         'week' => 'get_week',
         'weekday' => 'get_weekday',
         'year' => 'get_year',
