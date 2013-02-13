@@ -40,7 +40,8 @@ namespace {
 
         static protected $globalOperators = array(
             '=' => 'eq',
-            '==' => 'same',
+            '==' => 'eq',
+            '===' => 'same',
             '>' => 'gt',
             '>=' => 'gte',
             '<' => 'lt',
@@ -54,6 +55,8 @@ namespace {
             '-' => 'sub',
             '*' => 'mult',
             '/' => 'div',
+            ':=' => 'set',
+            ';' => 'noop',
             'rules' => 'rule',
         );
         
@@ -483,7 +486,7 @@ namespace {
         
         protected function shorthandQueryRun($value, $query) {
             // split query into tokens
-            $tokens = new \Chequer\Tokenizer($query, '/\$[a-z!~&^*\-+=\/|%<>]+|(?<![.@\d])-?(?:\d+\.)?\d+|[!~&\^*\-+=\/|%<>]{1,3}|\d+|[a-z]+|\s+|./i');
+            $tokens = new \Chequer\Tokenizer($query, '/\$[a-z!~&^*\-+=\/|%<>]+|(?<![.@\d])-?(?:\d+\.)?\d+|[!~&\^*\-+=\/|%<>:]{1,3}|\d+|[a-z]+|\s+|./i');
             $result = $this->shorthandParse($tokens, $value);
             if ($tokens->current !== null) throw new \Chequer\ParseException("Query finished prematurely!");
             return $result;
@@ -492,7 +495,7 @@ namespace {
         
         protected static $shcOperator = array(
             '$' => 1, '!' => 1, '~' => 1, '&' => 1, '^' => 1, '*' => 1, '-' => 1, '+' => 1, 
-            '=' => 1, '/' => 1, '|' => 1, '%' => 1, '<' => 1, '>' => 1, 
+            '=' => 1, '/' => 1, '|' => 1, '%' => 1, '<' => 1, '>' => 1, ';' => 1,
             '?' => 1
         );
         protected static $shcWhitespace = array(
@@ -500,7 +503,7 @@ namespace {
         );
         protected static $shcStopchar = array(
             '$' => 1, '!' => 1, '~' => 1, '&' => 1, '^' => 1, '*' => 1, '-' => 1, '+' => 1, 
-            '=' => 1, '/' => 1, '|' => 1, '%' => 1, '<' => 1, '>' => 1, 
+            '=' => 1, '/' => 1, '|' => 1, '%' => 1, '<' => 1, '>' => 1, ';' => 1,
             '?' => 1,
             '.' => 1, '@' => 1, ',' => 1, ':' => 1,
             '(' => 1, ')' => 1, 
@@ -952,6 +955,25 @@ namespace {
             return abs($operand);
         }        
         
+        
+        protected function operator_set( $value, $operand ) {
+            $parts = explode('.', $value);
+            if (!$parts) throw new \Chequer\ParseException("No typacast name given!");
+            // check if this is a global or built-in typecast
+            if (isset(self::$globalTypecasts[$parts[0]])) throw new \Chequer\ParseException("Typecast '$value' is global and cannot be changed!");
+            if (method_exists($this, 'typecast_' . $parts[0])) throw new \Chequer\ParseException("Typecast '$value' is built-in and cannot be changed!");
+            $current =& $this->typecasts;
+            foreach($parts as $part) {
+                if (!isset($current[$part])) $current[$part] = array();
+                $current =& $current[$part];
+            }
+            $current = $operand;
+            return $operand;
+        }
+        
+        protected function operator_noop( $value, $operand ) {
+            return $operand;
+        }        
         
         // -------------------------- Typecasts --------------------------
         

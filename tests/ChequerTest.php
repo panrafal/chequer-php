@@ -73,8 +73,8 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             'eq-true3' => array(true, 1, array('$eq' => '01')),
             'same-true' => array(true, 1, array('$same' => 1)),
             'same-false' => array(false, 1, array('$same' => '1')),
-            'same-short' => array(true, 1, '$== 1'),
-            'same-short-false' => array(false, '1', '$== 1'),
+            'same-short' => array(true, 1, '$=== 1'),
+            'same-short-false' => array(false, '1', '$=== 1'),
         );
     }    
     
@@ -211,6 +211,10 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             array('foo => . = foo && (. ~ foo)'),
             array('(one:1, two:2) => ( .two )', 2),
             array('(one:., two:. + .) => ( .two ) + .', 3, 1),
+            
+            // assignment
+            array('foo := bar; @foo', 'bar'),
+            array('foo\.bar := baz; @foo.bar', 'baz'),
         );
         $result = array();
         $i = 1;

@@ -356,6 +356,22 @@ arrays are changed to '(Array)'. This may change, so don't rely on it
   '$ . > 1 ? (1, 2, 3) : FALSE, (. > 1 ? B:A) : (.> 1 ? 2:1)', 
 
   ```
+* You can set variables as typecasts using `:=` operator. Anything before := will be the variable name. You will
+  be able to use them as standard typecast `@name`.
+  If you want to set a subkey, you will have to escape the dot with `\`. It is not possible to override built-in and global typecasts.
+  
+  You can use `;` noop operator to separate sentences.
+
+  ```php
+    // store "bar" in "foo", then read it
+    '$ foo := bar; @foo'
+    // store "bar in foo[bar], then read it
+    '$ foo\.bar := baz; @foo.bar'
+    // this is probably BAD syntax. This will store "bar" under the name which is the value of @foo...
+    '$ @foo := bar; @foo'
+    // again probably BAD syntax. The name will be the concatenation of "foo" and value of context[bar]
+    '$ foo.bar := bar; @foo.bar'
+  ```
 
 * The logic behind it, is to collect a `value`, an `operator` and the `parameter`.
   Afterwards call the `operator`**(** `value`, `parameter` **)** and use it's result as the `value` of the next `operator`.
@@ -441,7 +457,7 @@ The currently available operators are:
 * `$eq` => `compare`
 
   matches value using loose operator (==)
-* `$same` => `compare`
+* `$same` | `$===` => `compare`
 
   matches value using strict operator (===)
 * `$nc` => `compare`

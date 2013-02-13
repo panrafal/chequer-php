@@ -27,6 +27,8 @@ class StringTest extends PHPUnit_Framework_TestCase {
     public function fileProvider() {
         $array = array(
             array('foobar'),
+            array(''),
+            array(null),
         );
         $result = array();
         foreach($array as $i => $item) {
