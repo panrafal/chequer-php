@@ -1,4 +1,4 @@
-Chequer (as in Check-with-Query) 1.1
+Chequer (as in Check-with-Query) 2.0
 ====================================
 
 __Chequer is amazingly fast and magicaly simple.__<br/>
@@ -26,6 +26,8 @@ call methods, convert results... Whoa!
 Did I mention it's extensible - you can extend the class with your own operators, you can use
 closures as checks, you can create your own value conversions and you can do it all at runtime. 
 Plus it's **MIT** licensed, so share the love and contribute!
+
+Project's page and leaner documentation are in the works now. Stay tuned!
 
 Why another validation library?
 -----------------------------
