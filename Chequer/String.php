@@ -109,7 +109,7 @@ class String extends DynamicObject {
     
     /** @return String */
     public function replace($regex, $replacement) {
-        if (!$regex || ($regex[0] !== '/' && $regex[0] !== '#' && $regex[0] !== '~')) {
+        if (!$regex || ($regex[0] !== '/' && $regex[0] !== '~')) {
             return new String(str_replace($regex, $replacement, $this->string));
         }
         return new String(preg_replace($regex, $replacement, $this->string));
