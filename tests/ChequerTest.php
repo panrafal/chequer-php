@@ -192,6 +192,13 @@ class ChequerTest extends PHPUnit_Framework_TestCase {
             array('$ (. = 10) || (. = 10) || (!(~ "/\d/"))', true, 'foo'),
             
             array('$ 1, 2, 3 && FALSE, 4', array(1,2,false, 4)),
+            
+            // or value
+            array('FALSE || NULL || foo', 'foo'),
+            array('FALSE || NULL', null),
+            array('FALSE || 0', 0),
+            array('FALSE || NULL || (1,2,3)', array(1, 2, 3)),
+            
             // fast forward test
             array('1 + ( FALSE && TRUE && (this + (should "(not" be even "called!)" )) ) + 1', 2),
             

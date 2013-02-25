@@ -50,7 +50,7 @@ namespace {
             '!=' => 'ne',
             '~' => 'regex',
             '&&' => 'and',
-            '||' => 'or',
+            '||' => 'orvalue',
             '+' => 'add',
             '-' => 'sub',
             '*' => 'mult',
@@ -835,6 +835,16 @@ namespace {
                 return $this->query($value, $rule, false);
             }
         }
+        
+        protected function operator_orvalue( $value, $rule ) {
+            if ($value) {
+                throw new Chequer\ParseBreakException($value);
+            } elseif ($rule) {
+                throw new Chequer\ParseBreakException($rule);
+            } else {
+                return $rule;
+            }
+        }        
 
 
         protected function operator_and( $value, $rule ) {
