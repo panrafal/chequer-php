@@ -107,7 +107,7 @@ class ChequerTypecastsTest extends PHPUnit_Framework_TestCase {
         return self::providerResult(array(
             array("foo", '$ @string(foo)'),
             array("foo", '$ @string()', "foo"),
-            array(true, '$ @string(foobar).substr(3) = bar'),
+            array("bar", '$ @string(foobar).substr(3)'),
             array(true, '$ @string(foobar).substr(0,3) = foo'),
             array(true, '$ @string(foobar).substr(0,3).upper = FOO'),
             array(true, '$ @string(foobar).match("~foo(bar)?~") => ( .1 = bar ? @string(.0).upper : nope ) = FOOBAR'),

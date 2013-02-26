@@ -20,7 +20,9 @@ class StringTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals(mb_strtoupper($reference), $string->toUpperCase());
         $this->assertEquals(mb_substr($reference, 0, 2), $string->substr(0, 2));
         $this->assertEquals(mb_substr($reference, -2, 2), $string->substr(-2, 2));
-        $this->assertEquals(mb_substr($reference, -2), $string->substring(-2));
+        $this->assertEquals(mb_substr($reference, 3), $string->substr(3));
+        $this->assertEquals(mb_substr($reference, -2), $string->substring(-2), "last 2 chars");
+        $this->assertEquals(mb_substr($reference, 3), $string->substring(3), "from third pos");
         
     }
     

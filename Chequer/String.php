@@ -87,12 +87,18 @@ class String extends DynamicObject {
     
     /** @return String */
     public function substr($start, $length = null) {
-        return new String(mb_substr($this->string, $start, $length));
+        return new String( $length === null ? // workaround for php5.3 bug
+                mb_substr($this->string, $start) :
+                mb_substr($this->string, $start, $length)
+                );
     }
     
     /** @return String */
     public function substring($offsetA, $offsetB = null) {
-        return new String(mb_substr($this->string, $offsetA, $offsetB !== null ? $offsetB - $offsetA : null));
+        return new String($offsetB === null ? // workaround for php5.3 bug
+                    mb_substr($this->string, $offsetA) :
+                    mb_substr($this->string, $offsetA, $offsetB - $offsetA)
+                );
     }
     
     public function charAt($pos) {
