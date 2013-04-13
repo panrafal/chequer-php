@@ -1,4 +1,4 @@
-Chequer 2.0
+Chequer 0.2
 ===========
 
 __THE SPARKLING NEW LANGUAGE FOR CHECKING THINGS IN A SANE WAY__<br />

@@ -420,7 +420,7 @@ namespace {
 
         /** Calls or returns a typecast object */
         public function chequerTypecast($typecast, $callArgs = array(), $caller = null) {
-            if (isset($this->typecasts[$typecast])) {
+            if (array_key_exists($typecast, $this->typecasts)) {
                 $typecastObj = $this->typecasts[$typecast];
                 if (count($callArgs) == 0 && ($typecastObj instanceof Closure) == false) {
                     return $typecastObj;
@@ -914,6 +914,7 @@ namespace {
         }    
 
         protected function operator_add( $value, $operand ) {
+            if ($value === null && $operand === null) return null;
             if (is_numeric($value) && is_numeric($operand)) {
                 return $value + $operand;
             }
@@ -929,6 +930,7 @@ namespace {
         
 
         protected function operator_sub( $value, $operand ) {
+            if ($value === null && $operand === null) return null;
             if (is_numeric($value) && is_numeric($operand)) {
                 return $value - $operand;
             }
@@ -942,6 +944,7 @@ namespace {
         }        
         
         protected function operator_mult( $value, $operand ) {
+            if ($value === null && $operand === null) return null;
             if (is_numeric($value) && is_numeric($operand)) {
                 return $value * $operand;
             }
@@ -968,7 +971,7 @@ namespace {
         
         protected function operator_set( $value, $operand ) {
             $parts = explode('.', $value);
-            if (!$parts) throw new \Chequer\ParseException("No typacast name given!");
+            if (!$parts) throw new \Chequer\ParseException("No typecast name given!");
             // check if this is a global or built-in typecast
             if (isset(self::$globalTypecasts[$parts[0]])) throw new \Chequer\ParseException("Typecast '$value' is global and cannot be changed!");
             if (method_exists($this, 'typecast_' . $parts[0])) throw new \Chequer\ParseException("Typecast '$value' is built-in and cannot be changed!");
@@ -983,6 +986,18 @@ namespace {
         
         protected function operator_noop( $value, $operand ) {
             return $operand;
+        }        
+        
+        protected function operator_max( $value, $operand ) {
+            if (is_array($operand)) {
+                return max($operand);
+            } else return max($value, $operand);
+        }        
+        
+        protected function operator_min( $value, $operand ) {
+            if (is_array($operand)) {
+                return min($operand);
+            } else return min($value, $operand);
         }        
         
         // -------------------------- Typecasts --------------------------
