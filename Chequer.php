@@ -241,8 +241,9 @@ namespace {
         }
 
 
-        public static function checkValue( $value, $query, $matchAll = null ) {
+        public static function checkValue( $value, $query, $matchAll = null, $typecasts = null ) {
             $ch = new self($query, $matchAll);
+            if ($typecasts) $this->addTypecasts($typecasts);
             return $ch->check($value);
         }
 
