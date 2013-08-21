@@ -365,7 +365,7 @@ namespace {
             } elseif (is_object($query) && is_callable($query)) {
                 // callable queries
                 if ($query instanceof Chequer) return $query->check($value, $matchAll);
-                return call_user_func($query, $value, $query, $matchAll);
+                return call_user_func($query, $value, $this, $matchAll);
             }
 
             // query is an array....
