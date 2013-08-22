@@ -52,6 +52,22 @@ class ChequerTypecastsTest extends PHPUnit_Framework_TestCase {
             ), 1);
     }    
 
+    public function testGetSetTypecast() {
+        $chequer = $this->buildChequer();
+        
+        $this->assertEquals(false, isset($chequer->foo));
+        $this->assertEquals(false, isset($chequer->hello));
+        $chequer->foo = 'bar';
+        $chequer->hello = function() {return 'world';};
+
+        $this->assertEquals(true, isset($chequer->foo));
+        $this->assertEquals(true, isset($chequer->hello));
+
+        $this->assertEquals('bar', $chequer->foo);
+        $this->assertEquals('world', $chequer->hello);
+        
+    }
+    
     /**
      * @dataProvider timeTypecastProvider
      */

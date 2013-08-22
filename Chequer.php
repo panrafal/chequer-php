@@ -174,6 +174,18 @@ namespace {
             return $this;
         }
 
+        /** Gets variable/typecast */
+        public function __get($name) {
+            return $this->chequerTypecast($name);
+        }
+
+        public function __set($name, $value) {
+            $this->typecasts[$name] = $value;
+        }
+
+        public function __isset($name) {
+            return isset($this->typecasts[$name]);
+        }
 
         /** 
          * Adds predefined rules.
