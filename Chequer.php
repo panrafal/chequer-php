@@ -178,15 +178,15 @@ namespace {
         public function __get($name) {
             return $this->chequerTypecast($name);
         }
-
+        
         public function __set($name, $value) {
             $this->typecasts[$name] = $value;
         }
-
+        
         public function __isset($name) {
             return isset($this->typecasts[$name]);
         }
-
+        
         /** 
          * Adds predefined rules.
          * 
@@ -255,7 +255,7 @@ namespace {
 
         public static function checkValue( $value, $query, $matchAll = null, $typecasts = null ) {
             $ch = new self($query, $matchAll);
-            if ($typecasts) $this->addTypecasts($typecasts);
+            if ($typecasts) $ch->addTypecasts($typecasts);
             return $ch->check($value);
         }
 
